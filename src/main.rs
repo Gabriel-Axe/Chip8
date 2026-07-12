@@ -88,6 +88,48 @@ struct Memory {
     regI: IRegister,
 }
 
+impl Memory {
+    fn new() -> Self {
+        let r1 = GeneralRegister::new();
+        let r2 = GeneralRegister::new();
+        let r3 = GeneralRegister::new();
+        let r4 = GeneralRegister::new();
+        let r5 = GeneralRegister::new();
+        let r6 = GeneralRegister::new();
+        let r7 = GeneralRegister::new();
+        let r8 = GeneralRegister::new();
+        let r9 = GeneralRegister::new();
+        let r10 = GeneralRegister::new();
+        let r11 = GeneralRegister::new();
+        let r12 = GeneralRegister::new();
+        let r13 = GeneralRegister::new();
+        let r14 = GeneralRegister::new();
+        let r15 = GeneralRegister::new();
+        let r16 = GeneralRegister::new();
+
+        let regI = IRegister{data: Vec::new()};
+        Memory {
+            r1: r1,
+            r2: r2,
+            r3: r3,
+            r4: r4,
+            r5: r5,
+            r6: r6,
+            r7: r7,
+            r8: r8,
+            r9: r9,
+            r10: r10,
+            r11: r11,
+            r12: r12,
+            r13: r13,
+            r14: r14,
+            r15: r15,
+            r16: r16,
+            regI: regI
+        }
+    }
+}
+
 struct Chip8 {
     memory: Memory,
     reg_delay: DelayTimerRegister,
@@ -96,32 +138,22 @@ struct Chip8 {
     sp: StackPointer
 }
 
-fn memory() {
-    let r1 = GeneralRegister::new();
-    let r2 = GeneralRegister::new();
-    let r3 = GeneralRegister::new();
-    let r4 = GeneralRegister::new();
-    let r5 = GeneralRegister::new();
-    let r6 = GeneralRegister::new();
-    let r7 = GeneralRegister::new();
-    let r8 = GeneralRegister::new();
-    let r9 = GeneralRegister::new();
-    let r10 = GeneralRegister::new();
-    let r11 = GeneralRegister::new();
-    let r12 = GeneralRegister::new();
-    let r13 = GeneralRegister::new();
-    let r14 = GeneralRegister::new();
-    let r15 = GeneralRegister::new();
-    let r16 = GeneralRegister::new();
-
-    let regI = IRegister{data: Vec::new()};
-    let reg_delay = DelayTimerRegister{current: 0};
-    let reg_sound = SoundTimerRegister{current: 0};
-    let pc = ProgramCounter{count: 0};
-    let sp = StackPointer{address: 0};
-}
-
 impl Chip8 {
+    fn new() -> Chip8 {
+        let memory = Memory::new();
+        let reg_delay = DelayTimerRegister{current: 0};
+        let reg_sound = SoundTimerRegister{current: 0};
+        let pc = ProgramCounter{count: 0};
+        let sp = StackPointer{address: 0};
+
+        Chip8 {
+            memory: memory,
+            reg_delay: reg_delay,
+            reg_sound: reg_sound,
+            pc: pc,
+            sp: sp
+        }
+    }
     fn clear_screen() {
         
     }
@@ -142,10 +174,7 @@ impl Chip8 {
 fn main() {
     let blitz = load_rom("Blitz [David Winter].ch8");
     println!("Loaded Blitz: {} bytes", blitz.len());
-    // read_byte_by_byte_from_file(&blitz);
-    // read_rom_as_hex(&blitz);
-    // decimal_to_binary_only(&blitz);
-    identify_cls_and_ret(&blitz);
+
 }
 
 fn load_rom(filename: &str) -> Vec<u8> {
