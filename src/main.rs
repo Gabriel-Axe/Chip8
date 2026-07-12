@@ -1,5 +1,21 @@
 use std::{env, fs, path::PathBuf, str::from_utf8, vec};
 
+struct GeneralRegister {
+    data: Vec<u8>
+}
+
+struct IRegister {
+    data: Vec<u16>
+}
+
+struct DelayTimerRegister {
+    data: Vec<u8>
+}
+
+struct SoundTimerRegister {
+    data: Vec<u8>
+}
+
 fn main() {
     let blitz = load_rom("Blitz [David Winter].ch8");
     println!("Loaded Blitz: {} bytes", blitz.len());
