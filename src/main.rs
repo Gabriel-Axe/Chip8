@@ -4,16 +4,62 @@ struct GeneralRegister {
     data: Vec<u8>
 }
 
+impl GeneralRegister {
+    
+    fn new() -> GeneralRegister {
+        return GeneralRegister{
+            data: Vec::new()
+        };
+    }
+}
+
 struct IRegister {
     data: Vec<u16>
 }
 
 struct DelayTimerRegister {
-    data: Vec<u8>
+    current: u8
 }
 
 struct SoundTimerRegister {
-    data: Vec<u8>
+    current: u8
+}
+
+struct ProgramCounter {
+    count: u16
+}
+
+// NOTE: Never heard of this...
+struct StackPointer {
+    address: u8
+}
+
+type Bit16 = [bool; 16];
+type Stack = [Bit16; 16];
+
+fn memory() {
+    let r1 = GeneralRegister::new();
+    let r2 = GeneralRegister::new();
+    let r3 = GeneralRegister::new();
+    let r4 = GeneralRegister::new();
+    let r5 = GeneralRegister::new();
+    let r6 = GeneralRegister::new();
+    let r7 = GeneralRegister::new();
+    let r8 = GeneralRegister::new();
+    let r9 = GeneralRegister::new();
+    let r10 = GeneralRegister::new();
+    let r11 = GeneralRegister::new();
+    let r12 = GeneralRegister::new();
+    let r13 = GeneralRegister::new();
+    let r14 = GeneralRegister::new();
+    let r15 = GeneralRegister::new();
+    let r16 = GeneralRegister::new();
+
+    let regI = IRegister{data: Vec::new()};
+    let reg_delay = DelayTimerRegister{current: 0};
+    let reg_sound = SoundTimerRegister{current: 0};
+    let pc = ProgramCounter{count: 0};
+    let sp = StackPointer{address: 0};
 }
 
 fn main() {
