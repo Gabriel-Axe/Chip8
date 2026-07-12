@@ -121,6 +121,24 @@ fn memory() {
     let sp = StackPointer{address: 0};
 }
 
+impl Chip8 {
+    fn clear_screen() {
+        
+    }
+
+    fn jump_to_address() {
+        
+    }
+
+    fn jump_to_machine_code() {
+        
+    }
+
+    fn interpret() {
+        
+    }
+}
+
 fn main() {
     let blitz = load_rom("Blitz [David Winter].ch8");
     println!("Loaded Blitz: {} bytes", blitz.len());
