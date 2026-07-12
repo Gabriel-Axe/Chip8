@@ -34,8 +34,38 @@ struct StackPointer {
     address: u8
 }
 
+// NOTE: Intended for instructions with x and y
+type Bit4 = [bool; 4];
+
+// NOTE: Aka Byte
+// Usage at kk
+type Bit8 = [bool; 8];
+
 type Bit16 = [bool; 16];
 type Stack = [Bit16; 16];
+
+// NOTE: Usage at n
+type Nibble = (bool, bool, bool, bool);
+
+// NOTE: Usage at nnn
+type Address = (
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool,
+    bool);
+
+// NOTE: Stored with Most-Significant-Bit first (left to right)
+// 1. the first byte should be located at a even address
+// 2. if a program has sprites, I should pad something so
+// any instructions following will be properly put in the ram
 type Instruction = (bool, bool);
 
 struct Memory {
