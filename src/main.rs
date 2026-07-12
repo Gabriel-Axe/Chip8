@@ -36,6 +36,35 @@ struct StackPointer {
 
 type Bit16 = [bool; 16];
 type Stack = [Bit16; 16];
+type Instruction = (bool, bool);
+
+struct Memory {
+    r1: GeneralRegister,
+    r2: GeneralRegister,
+    r3: GeneralRegister,
+    r4: GeneralRegister,
+    r5: GeneralRegister,
+    r6: GeneralRegister,
+    r7: GeneralRegister,
+    r8: GeneralRegister,
+    r9: GeneralRegister,
+    r10: GeneralRegister,
+    r11: GeneralRegister,
+    r12: GeneralRegister,
+    r13: GeneralRegister,
+    r14: GeneralRegister,
+    r15: GeneralRegister,
+    r16: GeneralRegister,
+    regI: IRegister,
+}
+
+struct Chip8 {
+    memory: Memory,
+    reg_delay: DelayTimerRegister,
+    reg_sound: SoundTimerRegister,
+    pc: ProgramCounter,
+    sp: StackPointer
+}
 
 fn memory() {
     let r1 = GeneralRegister::new();
