@@ -1,28 +1,22 @@
-use std::{env, fs, path::PathBuf, str::from_utf8, vec};
+use core::num;
+use std::{env, fs, io::Bytes, path::PathBuf, str::{FromStr, from_utf8}, vec};
 
-struct GeneralRegister {
-    data: Vec<u8>
+struct Register {
+    data: u16
 }
 
-impl GeneralRegister {
-    
-    fn new() -> GeneralRegister {
-        return GeneralRegister{
-            data: Vec::new()
-        };
+impl Register {
+    fn new() -> Self {
+        Self { data: 0 }
     }
 }
 
-struct IRegister {
-    data: Vec<u16>
-}
-
 struct DelayTimerRegister {
-    current: u8
+    reg: Register
 }
 
 struct SoundTimerRegister {
-    current: u8
+    reg: Register
 }
 
 struct ProgramCounter {
@@ -34,98 +28,64 @@ struct StackPointer {
     address: u8
 }
 
-// NOTE: Intended for instructions with x and y
-type Bit4 = [bool; 4];
-
-// NOTE: Aka Byte
-// Usage at kk
-type Bit8 = [bool; 8];
-
-type Bit16 = [bool; 16];
-type Stack = [Bit16; 16];
-
-// NOTE: Usage at n
-type Nibble = (bool, bool, bool, bool);
-
-// NOTE: Usage at nnn
-type Address = (
-    bool,
-    bool,
-    bool,
-    bool,
-    bool,
-    bool,
-    bool,
-    bool,
-    bool,
-    bool,
-    bool,
-    bool);
-
 // NOTE: Stored with Most-Significant-Bit first (left to right)
 // 1. the first byte should be located at a even address
 // 2. if a program has sprites, I should pad something so
 // any instructions following will be properly put in the ram
-type Instruction = (bool, bool);
 
 struct Memory {
-    r1: GeneralRegister,
-    r2: GeneralRegister,
-    r3: GeneralRegister,
-    r4: GeneralRegister,
-    r5: GeneralRegister,
-    r6: GeneralRegister,
-    r7: GeneralRegister,
-    r8: GeneralRegister,
-    r9: GeneralRegister,
-    r10: GeneralRegister,
-    r11: GeneralRegister,
-    r12: GeneralRegister,
-    r13: GeneralRegister,
-    r14: GeneralRegister,
-    r15: GeneralRegister,
-    r16: GeneralRegister,
-    regI: IRegister,
+    V1: Register,
+    V2: Register,
+    V3: Register,
+    V4: Register,
+    V5: Register,
+    V6: Register,
+    V7: Register,
+    V8: Register,
+    V9: Register,
+    V10: Register,
+    V11: Register,
+    V12: Register,
+    V13: Register,
+    V14: Register,
+    V15: Register,
+    V16: Register,
+
+    VF: Register,
+
+    regI: Register,
+
+    dt_reg: Register,
+    st_reg: Register,
 }
 
 impl Memory {
     fn new() -> Self {
-        let r1 = GeneralRegister::new();
-        let r2 = GeneralRegister::new();
-        let r3 = GeneralRegister::new();
-        let r4 = GeneralRegister::new();
-        let r5 = GeneralRegister::new();
-        let r6 = GeneralRegister::new();
-        let r7 = GeneralRegister::new();
-        let r8 = GeneralRegister::new();
-        let r9 = GeneralRegister::new();
-        let r10 = GeneralRegister::new();
-        let r11 = GeneralRegister::new();
-        let r12 = GeneralRegister::new();
-        let r13 = GeneralRegister::new();
-        let r14 = GeneralRegister::new();
-        let r15 = GeneralRegister::new();
-        let r16 = GeneralRegister::new();
 
-        let regI = IRegister{data: Vec::new()};
         Memory {
-            r1: r1,
-            r2: r2,
-            r3: r3,
-            r4: r4,
-            r5: r5,
-            r6: r6,
-            r7: r7,
-            r8: r8,
-            r9: r9,
-            r10: r10,
-            r11: r11,
-            r12: r12,
-            r13: r13,
-            r14: r14,
-            r15: r15,
-            r16: r16,
-            regI: regI
+            V1: Register::new(),
+            V2: Register::new(),
+            V3: Register::new(),
+            V4: Register::new(),
+            V5: Register::new(),
+            V6: Register::new(),
+            V7: Register::new(),
+            V8: Register::new(),
+            V9: Register::new(),
+            V10: Register::new(),
+            V11: Register::new(),
+            V12: Register::new(),
+            V13: Register::new(),
+            V14: Register::new(),
+            V15: Register::new(),
+            V16: Register::new(),
+
+            VF: Register::new(),
+
+            regI: Register::new(),
+
+            dt_reg: Register::new(),
+            st_reg: Register::new()
         }
     }
 }
@@ -154,35 +114,78 @@ impl Chip8 {
             sp: sp
         }
     }
-    fn clear_screen() {
+    fn clear_screen(self) {
         
     }
 
-    fn jump_to_address() {
+    fn return_from_subroutine(mut self) {
+        self.sp.address -= 1;
+    }
+
+    fn jump_to_address(self) {
         
     }
 
-    fn jump_to_machine_code() {
+    fn jump_to_machine_code(self) {
         
     }
 
-    fn interpret() {
-        
+    fn read_instruction(self, mut instruction: Instruction) {
     }
-}
+
+    fn interpret(self, mut bytes: Vec<u8>) {
+        let instruction_type = bytes.pop().unwrap(); // WARN: DANGER, unsafe operation
+        let instruction_data = bytes.pop().unwrap();
+        let instruction = Instruction {inst_type: instruction_type, inst_data: instruction_data, };
+        self.read_instruction(instruction);
+    }
+
+    // fn somethingelse() {
+    //     for byte in bytes  {
+    //         instruction = 
+    //             match byte {
+    //                 224 => self.clear_screen(),           
+    //                 238 => self.return_from_subroutine(),
+    //                 _ => break
+    //             }
+    //     }
+    }
 
 fn main() {
     let blitz = load_rom("Blitz [David Winter].ch8");
     println!("Loaded Blitz: {} bytes", blitz.len());
+    let as_u16 = convert_u8_to_u16(&blitz);
+    let asas = as_u16.expect("didnt work :(");
+    u16_to_decimal(asas);
+    // let chip8 = Chip8::new();
+    // chip8.interpret(blitz);
+}
 
+fn get_4th_nibble(instruction: Bit16) {
+    let 1st_nibble = instruction
+    let 2th_nibble = ;
+    let 3th_nibble = ;
+    let 4th_nibble = ;
 }
 
 fn load_rom(filename: &str) -> Vec<u8> {
-    let mut path = PathBuf::from("roms/chip8-roms/games");
-    path.push(filename);
+    fs::read(filename).expect("Could not load ROM")
+}
 
-    fs::read(&path)
-        .unwrap_or_else(|err| panic!("Could not load ROM: {}, reason: {}", path.display(), err))
+// fn convert_8bits_to_16bits(bytes: &Vec<u8>) -> Vec<u16> {
+fn convert_u8_to_u16(bytes: &[u8]) -> Result<Vec<u16>, String> {
+    // if bytes.len() % 2 != 0 {
+    //     let res = String::from_str("Cannot convert u8 vector, there is a odd number of values");
+    //     let mes = res.expect("Could not unwrap :(");
+    //     return Err(mes);
+    // }
+
+    let words: Vec<u16> = bytes
+        .chunks_exact(2)
+        .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+        .collect();
+
+    return Ok(words)
 }
 
 fn identify_cls_and_ret(bytes: &Vec<u8>) {
@@ -208,6 +211,12 @@ fn read_byte_by_byte_from_file(bytes: &Vec<u8>) {
 
 fn decimal_to_binary_one_number(number: &u8) {
     println!("{:08b}", number);
+}
+
+fn u16_to_decimal(numbers: Vec<u16>) {
+    for num in numbers {
+        println!("{:016b}", num);
+    }
 }
 
 fn decimal_to_binary_only(numbers: &[u8]) {
