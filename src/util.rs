@@ -1,10 +1,22 @@
-pub fn print_decimal_in_16_bits_binary(number: &u8) {
-    println!("{:16b}", number);
+pub fn print_bytes_in_16_binary(bytes: &Vec<u16>) {
+    for &byte in bytes {
+        println!("{:016b}", byte);
+    }
 }
 
-pub fn print_bytes_in_binary(numbers: &[u8]) {
-    for &num in numbers {
-        println!("{:08b}", num);
+pub fn get_4th_nibble(bytes: &Vec<u16>) -> Vec<u16> {
+    let mut nvec: Vec<u16> = Vec::new();
+    for &byte in bytes {
+        let nbyte = byte & 61440; // NOTE: equivalent to 1111 0000 0000 0000
+        nvec.push(nbyte);
+    }
+
+    return nvec;
+}
+
+pub fn print_bytes_in_binary(bytes: &Vec<u8>) {
+    for &byte in bytes {
+        println!("{:08b}", byte);
     }
 }
 
@@ -17,7 +29,7 @@ pub fn print_bytes_in_hex(rom: &Vec<u8>) {
     println!("");
 }
 
-pub fn print_bytes_vector(bytes: &Vec<u8>) {
+pub fn print_bytes_in_deciaml(bytes: &Vec<u8>) {
     for byte in bytes {
         println!("{}", byte);
     }
