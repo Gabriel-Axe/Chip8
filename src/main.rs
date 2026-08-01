@@ -1,6 +1,6 @@
 use std::{fs};
 
-use crate::util::{convert_u8_to_u16, get_instruction_nibble, print_bytes_in_16_binary, print_bytes_in_binary};
+use crate::{chip8::Chip8, util::{convert_u8_to_u16, get_instruction_nibble, print_bytes_in_16_binary, print_bytes_in_binary}};
 
 mod util;
 mod chip8;
@@ -8,12 +8,8 @@ mod memory;
 
 fn main() {
     let blitz = load_rom("Blitz [David Winter].ch8");
-    for instruction in blitz {
-        let inst_type = get_instruction_nibble(instruction);
-        match  {
-            
-        }
-    }
+    let chip8 = Chip8::new();
+    chip8.interpret(blitz);
 }
 
 fn load_rom(filename: &str) -> Vec<u16> {
