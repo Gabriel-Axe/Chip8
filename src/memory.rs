@@ -17,7 +17,7 @@ struct SoundTimerRegister {
     reg: Register
 }
 
-struct Memory {
+pub struct Memory {
     V1: Register,
     V2: Register,
     V3: Register,
@@ -39,13 +39,15 @@ struct Memory {
 
     regI: Register,
 
+    pc: u16,
+    stack_pointer: u16,
+
     dt_reg: Register,
     st_reg: Register,
 }
 
 impl Memory {
-    fn new() -> Self {
-
+    pub fn new() -> Self {
         Memory {
             V1: Register::new(),
             V2: Register::new(),
@@ -69,7 +71,14 @@ impl Memory {
             regI: Register::new(),
 
             dt_reg: Register::new(),
-            st_reg: Register::new()
+            st_reg: Register::new(),
+
+            pc: 0, // idk what bytes the PC uses
+            stack_pointer: 0, // Stack pointer
         }
+    }
+
+    pub  fn hi() {
+        
     }
 }

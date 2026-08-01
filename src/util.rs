@@ -4,14 +4,9 @@ pub fn print_bytes_in_16_binary(bytes: &Vec<u16>) {
     }
 }
 
-pub fn get_4th_nibble(bytes: &Vec<u16>) -> Vec<u16> {
-    let mut nvec: Vec<u16> = Vec::new();
-    for &byte in bytes {
-        let nbyte = byte & 61440; // NOTE: equivalent to 1111 0000 0000 0000
-        nvec.push(nbyte);
-    }
-
-    return nvec;
+pub fn get_instruction_nibble(byte: u16) -> u16 {
+    // NOTE: 61440 is equivalent to 1111 0000 0000 0000
+    return byte & 61440
 }
 
 pub fn print_bytes_in_binary(bytes: &Vec<u8>) {
