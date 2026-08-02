@@ -211,6 +211,12 @@ impl CPU {
         vx.data = vx.data / 2;
     }
 
+    pub fn return_from_subroutine(&mut self, memory: Memory) {
+        let addr = memory.stack[self.sp];
+        self.set_program_counter_to_address(addr);
+        self.decrement_sp();
+    }
+
     pub fn shl_values(&mut self, x: u8) {
         let mut vx = self.get_vx_register_by_id(x);
         let mut vf = self.VF;

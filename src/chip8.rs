@@ -19,9 +19,6 @@ impl Chip8 {
         
     }
 
-    fn return_from_subroutine(&self) {
-    }
-
     fn jump_to_address(&mut self, address: u16) {
         self.cpu.set_program_counter_to_address(address);
     }
