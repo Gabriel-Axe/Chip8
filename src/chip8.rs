@@ -1,4 +1,4 @@
-use crate::{memory::Memory, util::get_instruction_nibble};
+use crate::{memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u8}};
 
 pub struct Chip8 {
     memory: Memory,
@@ -30,6 +30,43 @@ impl Chip8 {
         
     }
 
+    fn increment_pc(&mut self) {
+        self.memory.pc += 1;
+    }
+
+    fn set_value_of_pc(&mut self, value: u16) {
+        self.memory.pc = value;
+    }
+
+    fn reset_pc(&mut self) {
+        self.memory.pc = 0;
+    }
+
+    fn compare_value_to_register_value(&mut self, compared_val: u8, reg_id: u8) {
+        let register = match reg_id {
+            0 => &self.memory.V0,
+            1 => &self.memory.V1,
+            2 => &self.memory.V2,
+            3 => &self.memory.V3,
+            4 => &self.memory.V4,
+            5 => &self.memory.V5,
+            6 => &self.memory.V6,
+            7 => &self.memory.V7,
+            8 => &self.memory.V8,
+            9 => &self.memory.V9,
+            10 => &self.memory.V10,
+            11 => &self.memory.V11,
+            12 => &self.memory.V12,
+            13 => &self.memory.V13,
+            14 => &self.memory.V14,
+            15 => &self.memory.V15,
+            _ => panic!("Invalid register ID: {}", reg_id),
+        };
+
+        if register.data == compared_val {
+            self.increment_pc();
+        }
+    }
     fn byte_skip_instruction(&self) {
         
     }
@@ -65,7 +102,7 @@ impl Chip8 {
         
     }
 
-    fn read_instruction(&self, mut instruction: u16) {
+    fn read_instruction(&mut self, mut instruction: u16) {
         let inst_type = get_instruction_nibble(instruction);
 
         let nibble_3 = instruction >> 3;
@@ -76,7 +113,10 @@ impl Chip8 {
             0 => self.clear_screen(),
             1 => self.jump_to_address(),
             2 => self.call_address(),
-            3 => self.skip_instruction_if(),
+            3 => {
+                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
+                self.compare_value_to_register_value(value, nibble_3 as u8);
+            }
             4 => self.byte_skip_instruction(),
             5 => self.skip_instruction_if(),
             6 => self.set_value_at_register(),
@@ -89,9 +129,10 @@ impl Chip8 {
             13 => self.display_spryte(),
             _ => return
         }
+        self.increment_pc();
     }
 
-    pub fn interpret(&self, instructions: &Vec<u16>) {
+    pub fn interpret(&mut self, instructions: &Vec<u16>) {
         for &inst in instructions {
             self.read_instruction(inst);
         }

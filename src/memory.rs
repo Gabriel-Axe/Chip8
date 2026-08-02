@@ -1,6 +1,6 @@
 
-struct Register {
-    data: u16
+pub struct Register {
+    pub data: u8
 }
 
 impl Register {
@@ -18,37 +18,38 @@ struct SoundTimerRegister {
 }
 
 pub struct Memory {
-    V1: Register,
-    V2: Register,
-    V3: Register,
-    V4: Register,
-    V5: Register,
-    V6: Register,
-    V7: Register,
-    V8: Register,
-    V9: Register,
-    V10: Register,
-    V11: Register,
-    V12: Register,
-    V13: Register,
-    V14: Register,
-    V15: Register,
-    V16: Register,
+    pub V0: Register,
+    pub V1: Register,
+    pub V2: Register,
+    pub V3: Register,
+    pub V4: Register,
+    pub V5: Register,
+    pub V6: Register,
+    pub V7: Register,
+    pub V8: Register,
+    pub V9: Register,
+    pub V10: Register,
+    pub V11: Register,
+    pub V12: Register,
+    pub V13: Register,
+    pub V14: Register,
+    pub V15: Register,
 
-    VF: Register,
+    pub VF: Register,
 
-    regI: Register,
+    pub regI: Register,
 
-    pc: u16,
-    stack_pointer: u16,
+    pub pc: u16,
+    pub stack_pointer: u16,
 
-    dt_reg: Register,
-    st_reg: Register,
+    pub dt_reg: Register,
+    pub st_reg: Register,
 }
 
 impl Memory {
     pub fn new() -> Self {
         Memory {
+            V0: Register::new(),
             V1: Register::new(),
             V2: Register::new(),
             V3: Register::new(),
@@ -64,7 +65,6 @@ impl Memory {
             V13: Register::new(),
             V14: Register::new(),
             V15: Register::new(),
-            V16: Register::new(),
 
             VF: Register::new(),
 
@@ -76,9 +76,5 @@ impl Memory {
             pc: 0, // idk what bytes the PC uses
             stack_pointer: 0, // Stack pointer
         }
-    }
-
-    pub  fn hi() {
-        
     }
 }

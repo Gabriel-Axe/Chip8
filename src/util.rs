@@ -30,11 +30,15 @@ pub fn print_bytes_in_deciaml(bytes: &Vec<u8>) {
     }
 }
 
-pub fn convert_u8_to_u16(bytes: &[u8]) -> Result<Vec<u16>, String> {
+pub fn convert_bytes_u8_to_u16(bytes: &[u8]) -> Result<Vec<u16>, String> {
     let words: Vec<u16> = bytes
         .chunks_exact(2)
         .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
         .collect();
 
     return Ok(words)
+}
+
+pub fn join_2_nibbles_into_u8(nibble_1: u8, nibble_2: u8) -> u8 {
+    nibble_1 + nibble_2
 }
