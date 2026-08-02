@@ -2,7 +2,6 @@ use crate::{memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u
 
 use rand::{Rng, RngExt, rng};
 
-
 pub struct Chip8 {
     memory: Memory,
 }

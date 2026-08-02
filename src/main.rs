@@ -2,9 +2,11 @@ use std::{fs};
 
 use crate::{chip8::Chip8, util::{convert_bytes_u8_to_u16, get_instruction_nibble, print_bytes_in_16_binary, print_bytes_in_binary}};
 
-mod util;
 mod chip8;
+mod cpu;
 mod memory;
+mod register;
+mod util;
 
 fn main() {
     let blitz = load_rom("Blitz [David Winter].ch8");
