@@ -168,8 +168,29 @@ impl Chip8 {
         register.data = value;
     }
 
-    fn add_byte_operation(&self) {
-        
+    fn add_byte_operation(&mut self, reg_id: u8, value: u8) {
+        let mut register = match reg_id {
+            0 => &mut self.memory.V0,
+            1 => &mut self.memory.V1,
+            2 => &mut self.memory.V2,
+            3 => &mut self.memory.V3,
+            4 => &mut self.memory.V4,
+            5 => &mut self.memory.V5,
+            6 => &mut self.memory.V6,
+            7 => &mut self.memory.V7,
+            8 => &mut self.memory.V8,
+            9 => &mut self.memory.V9,
+            10 => &mut self.memory.V10,
+            11 => &mut self.memory.V11,
+            12 => &mut self.memory.V12,
+            13 => &mut self.memory.V13,
+            14 => &mut self.memory.V14,
+            15 => &mut self.memory.V15,
+            _ => panic!("Invalid register ID: {}", reg_id),
+        };
+
+        let data = register.data;
+        register.data = data + value;
     }
 
     fn and_number_to_random_value(&self) {
@@ -221,7 +242,10 @@ impl Chip8 {
                 let value = join_2_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8);
                 self.set_value_at_register(nibble_3 as u8, value);
             }
-            7 => self.add_byte_operation(),
+            7 => {
+                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
+                self.add_byte_operation(nibble_3 as u8, value);
+            }
             9 => self.byte_skip_instruction(),
             9 => self.byte_skip_instruction(),
             10 => self.set_register_i(),
