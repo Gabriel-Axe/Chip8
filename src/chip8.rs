@@ -23,7 +23,7 @@ impl Chip8 {
     }
 
     fn jump_to_address(&mut self, address: u16) {
-        self.memory.pc = address;
+        self.cpu.set_program_counter_to_address(address);
     }
 
     fn jump_offset_by_v0(&mut self) {
@@ -32,13 +32,20 @@ impl Chip8 {
         self.jump_to_address(cur_addr + v0.data as u16);
     }
 
-    fn skip_instruction_if(&self) {
-        
+    fn skip_instruction_if_equal(&mut self, reg_id: u8, value: u8) {
+        let register = self.cpu.get_vx_register_by_id(reg_id);
+        if register.data == value {
+            self.cpu.increment_pc();
+        }
     }
 
-    fn increment_pc(&mut self) {
-        self.memory.pc += 1;
+    fn skip_instruction_if_nequal(&mut self, reg_id: u8, value: u8) {
+        let register = self.cpu.get_vx_register_by_id(reg_id);
+        if register.data != value {
+            self.cpu.increment_pc();
+        }
     }
+
 
     fn set_value_of_pc(&mut self, value: u16) {
         self.memory.pc = value;
@@ -109,6 +116,10 @@ impl Chip8 {
     }
 
     fn call_address(&self) {
+    }
+
+    fn call_subroutine_at_address(&mut self, address: u16) {
+        
     }
 
     fn jump_to_machine_code(&self) {

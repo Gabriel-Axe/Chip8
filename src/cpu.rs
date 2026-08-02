@@ -18,6 +18,9 @@ pub struct CPU {
     V14: Register,
     V15: Register,
 
+    pc: u16, // Program Counter
+    sp: u8,
+
     pub VF: Register, // NOTE: What is this register for?
 
     pub regI: RegisterI,
@@ -52,6 +55,9 @@ impl CPU {
 
             dt_reg: Register::new(),
             st_reg: Register::new(),
+
+            pc: 0, // idk what bytes the PC uses
+            sp: 0, // Stack pointer
         }
     }
 
@@ -75,5 +81,13 @@ impl CPU {
             15 => &mut self.V15,
             _ => panic!("Invalid register ID: {}", reg_id),
         }
+    }
+
+    pub fn set_program_counter_to_address(&mut self, address: u16) {
+        self.pc = address;
+    }
+
+    pub fn increment_pc(&mut self) {
+        self.pc += 1;
     }
 }
