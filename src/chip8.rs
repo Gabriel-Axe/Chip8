@@ -56,9 +56,9 @@ impl Chip8 {
             9 => &self.memory.V9,
             10 => &self.memory.V10,
             11 => &self.memory.V11,
-            12 => &self.memory.V12,
             13 => &self.memory.V13,
             14 => &self.memory.V14,
+            12 => &self.memory.V12,
             15 => &self.memory.V15,
             _ => panic!("Invalid register ID: {}", reg_id),
         };
@@ -144,8 +144,28 @@ impl Chip8 {
         
     }
 
-    fn set_value_at_register(&self) {
-        
+    fn set_value_at_register(&mut self, reg_id: u8, value: u8) {
+        let mut register = match reg_id {
+            0 => &mut self.memory.V0,
+            1 => &mut self.memory.V1,
+            2 => &mut self.memory.V2,
+            3 => &mut self.memory.V3,
+            4 => &mut self.memory.V4,
+            5 => &mut self.memory.V5,
+            6 => &mut self.memory.V6,
+            7 => &mut self.memory.V7,
+            8 => &mut self.memory.V8,
+            9 => &mut self.memory.V9,
+            10 => &mut self.memory.V10,
+            11 => &mut self.memory.V11,
+            12 => &mut self.memory.V12,
+            13 => &mut self.memory.V13,
+            14 => &mut self.memory.V14,
+            15 => &mut self.memory.V15,
+            _ => panic!("Invalid register ID: {}", reg_id),
+        };
+
+        register.data = value;
     }
 
     fn add_byte_operation(&self) {
@@ -194,8 +214,13 @@ impl Chip8 {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
                 self.value_not_equals_register_value(value as u8, nibble_3 as u8);
             }
-            5 => self.skip_instruction_if(),
-            6 => self.set_value_at_register(),
+            5 => {
+                self.compare_registers_values(nibble_2 as u8, nibble_3 as u8);
+            }
+            6 => {
+                let value = join_2_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8);
+                self.set_value_at_register(nibble_3 as u8, value);
+            }
             7 => self.add_byte_operation(),
             9 => self.byte_skip_instruction(),
             9 => self.byte_skip_instruction(),
