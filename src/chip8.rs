@@ -18,12 +18,13 @@ impl Chip8 {
     fn return_from_subroutine(&self) {
     }
 
-    fn jump_to_address(&self) {
-        
+    fn jump_to_address(&mut self, address: u16) {
+        self.memory.pc = address;
     }
 
     fn jump_offset_by_v0(&self) {
-        
+        let mut cur_addr = self.get_pc_address();
+        self.jump_to_address(cur_addr + self.memory.V0.data as u16);
     }
 
     fn skip_instruction_if(&self) {
@@ -40,6 +41,10 @@ impl Chip8 {
 
     fn reset_pc(&mut self) {
         self.memory.pc = 0;
+    }
+
+    fn get_pc_address(&self) -> u16 {
+        self.memory.pc
     }
 
     fn value_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
@@ -212,8 +217,8 @@ impl Chip8 {
         
     }
 
-    fn set_register_i(&self) {
-        
+    fn set_register_i(&mut self, reg_id: u8, value: u16) {
+        self.memory.regI.data = value;
     }
 
     fn read_instruction(&mut self, mut instruction: u16) {
@@ -246,9 +251,13 @@ impl Chip8 {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
                 self.add_byte_operation(nibble_3 as u8, value);
             }
-            9 => self.byte_skip_instruction(),
-            9 => self.byte_skip_instruction(),
-            10 => self.set_register_i(),
+            9 => {
+                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
+                self.value_equals_register_value(value, nibble_3 as u8);
+            }
+            10 => {
+                self.set_register_i()
+            }
             11 => self.jump_offset_by_v0(),
             12 => self.and_number_to_random_value(),
             13 => self.display_spryte(),

@@ -3,6 +3,10 @@ pub struct Register {
     pub data: u8
 }
 
+pub struct RegisterI {
+    pub data: u16
+}
+
 impl Register {
     fn new() -> Self {
         Self { data: 0 }
@@ -37,7 +41,7 @@ pub struct Memory {
 
     pub VF: Register,
 
-    pub regI: Register,
+    pub regI: RegisterI,
 
     pub pc: u16,
     pub stack_pointer: u16,
@@ -68,7 +72,7 @@ impl Memory {
 
             VF: Register::new(),
 
-            regI: Register::new(),
+            regI: RegisterI { data: 0 },
 
             dt_reg: Register::new(),
             st_reg: Register::new(),
