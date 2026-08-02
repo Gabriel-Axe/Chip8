@@ -24,6 +24,7 @@ struct SoundTimerRegister {
 pub struct Memory {
     
     pub memory: [u8; 3583],
+    pub stack: [u16; 16],
 
     pub V0: Register,
     pub V1: Register,
@@ -47,7 +48,7 @@ pub struct Memory {
     pub regI: RegisterI,
 
     pub pc: u16,
-    pub stack_pointer: u16,
+    pub sp: u8,
 
     pub dt_reg: Register,
     pub st_reg: Register,
@@ -81,7 +82,7 @@ impl Memory {
             st_reg: Register::new(),
 
             pc: 0, // idk what bytes the PC uses
-            stack_pointer: 0, // Stack pointer
+            sp: 0, // Stack pointer
         }
     }
 }

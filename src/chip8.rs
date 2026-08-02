@@ -1,5 +1,8 @@
 use crate::{memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
+use rand::{Rng, RngExt, rng};
+
+
 pub struct Chip8 {
     memory: Memory,
 }
@@ -198,8 +201,32 @@ impl Chip8 {
         register.data = data + value;
     }
 
-    fn and_number_to_random_value(&self) {
-        
+    fn and_number_to_random_value(&mut self, reg_id: u8, and_val: u8) {
+        let mut rng = rng();
+
+        let mut register = match reg_id {
+            0 => &mut self.memory.V0,
+            1 => &mut self.memory.V1,
+            2 => &mut self.memory.V2,
+            3 => &mut self.memory.V3,
+            4 => &mut self.memory.V4,
+            5 => &mut self.memory.V5,
+            6 => &mut self.memory.V6,
+            7 => &mut self.memory.V7,
+            8 => &mut self.memory.V8,
+            9 => &mut self.memory.V9,
+            10 => &mut self.memory.V10,
+            11 => &mut self.memory.V11,
+            13 => &mut self.memory.V13,
+            14 => &mut self.memory.V14,
+            12 => &mut self.memory.V12,
+            15 => &mut self.memory.V15,
+            _ => panic!("Invalid register ID: {}", reg_id),
+        };
+
+        let val = rng.next_u32() as u8;
+        let result_val = and_val & val;
+        register.data = result_val;
     }
 
     fn display_spryte(&self) {
