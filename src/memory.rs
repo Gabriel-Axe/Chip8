@@ -22,6 +22,9 @@ struct SoundTimerRegister {
 }
 
 pub struct Memory {
+    
+    pub memory: [u8; 3583],
+
     pub V0: Register,
     pub V1: Register,
     pub V2: Register,

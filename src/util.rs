@@ -42,3 +42,7 @@ pub fn convert_bytes_u8_to_u16(bytes: &[u8]) -> Result<Vec<u16>, String> {
 pub fn join_2_nibbles_into_u8(nibble_1: u8, nibble_2: u8) -> u8 {
     nibble_1 + nibble_2
 }
+
+pub fn join_3_nibbles_into_u8(nibble_1: u8, nibble_2: u8, nibble_3: u8) -> u8 {
+    nibble_1 + nibble_2 + nibble_3
+}

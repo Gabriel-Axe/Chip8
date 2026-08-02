@@ -1,4 +1,4 @@
-use crate::{memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u8}};
+use crate::{memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
 pub struct Chip8 {
     memory: Memory,
@@ -22,7 +22,7 @@ impl Chip8 {
         self.memory.pc = address;
     }
 
-    fn jump_offset_by_v0(&self) {
+    fn jump_offset_by_v0(&mut self) {
         let mut cur_addr = self.get_pc_address();
         self.jump_to_address(cur_addr + self.memory.V0.data as u16);
     }
@@ -217,7 +217,7 @@ impl Chip8 {
         
     }
 
-    fn set_register_i(&mut self, reg_id: u8, value: u16) {
+    fn set_register_i(&mut self, value: u16) {
         self.memory.regI.data = value;
     }
 
@@ -256,9 +256,12 @@ impl Chip8 {
                 self.value_equals_register_value(value, nibble_3 as u8);
             }
             10 => {
-                self.set_register_i()
+                let value = join_3_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8, nibble_3 as u8);
+                self.set_register_i(value as u16);
             }
-            11 => self.jump_offset_by_v0(),
+            11 => {
+                self.jump_offset_by_v0()
+            }
             12 => self.and_number_to_random_value(),
             13 => self.display_spryte(),
             _ => return
