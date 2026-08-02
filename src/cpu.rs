@@ -1,22 +1,22 @@
 use crate::register::{Register, RegisterI};
 
 pub struct CPU {
-    pub V0: Register,
-    pub V1: Register,
-    pub V2: Register,
-    pub V3: Register,
-    pub V4: Register,
-    pub V5: Register,
-    pub V6: Register,
-    pub V7: Register,
-    pub V8: Register,
-    pub V9: Register,
-    pub V10: Register,
-    pub V11: Register,
-    pub V12: Register,
-    pub V13: Register,
-    pub V14: Register,
-    pub V15: Register,
+    V0: Register,
+    V1: Register,
+    V2: Register,
+    V3: Register,
+    V4: Register,
+    V5: Register,
+    V6: Register,
+    V7: Register,
+    V8: Register,
+    V9: Register,
+    V10: Register,
+    V11: Register,
+    V12: Register,
+    V13: Register,
+    V14: Register,
+    V15: Register,
 
     pub VF: Register, // NOTE: What is this register for?
 
@@ -52,6 +52,28 @@ impl CPU {
 
             dt_reg: Register::new(),
             st_reg: Register::new(),
+        }
+    }
+
+    pub fn get_vx_register_by_id(&mut self, reg_id: u8) -> &mut Register {
+        match reg_id {
+            0 => &mut self.V0,
+            1 => &mut self.V1,
+            2 => &mut self.V2,
+            3 => &mut self.V3,
+            4 => &mut self.V4,
+            5 => &mut self.V5,
+            6 => &mut self.V6,
+            7 => &mut self.V7,
+            8 => &mut self.V8,
+            9 => &mut self.V9,
+            10 => &mut self.V10,
+            11 => &mut self.V11,
+            13 => &mut self.V13,
+            14 => &mut self.V14,
+            12 => &mut self.V12,
+            15 => &mut self.V15,
+            _ => panic!("Invalid register ID: {}", reg_id),
         }
     }
 }
