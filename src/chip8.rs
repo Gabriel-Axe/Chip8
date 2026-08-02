@@ -42,7 +42,7 @@ impl Chip8 {
         self.memory.pc = 0;
     }
 
-    fn compare_value_to_register_value(&mut self, compared_val: u8, reg_id: u8) {
+    fn value_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
         let register = match reg_id {
             0 => &self.memory.V0,
             1 => &self.memory.V1,
@@ -67,6 +67,79 @@ impl Chip8 {
             self.increment_pc();
         }
     }
+
+    fn compare_registers_values(&mut self, reg_id_1: u8, reg_id_2: u8) {
+        let register_1 = match reg_id_1 {
+            0 => &self.memory.V0,
+            1 => &self.memory.V1,
+            2 => &self.memory.V2,
+            3 => &self.memory.V3,
+            4 => &self.memory.V4,
+            5 => &self.memory.V5,
+            6 => &self.memory.V6,
+            7 => &self.memory.V7,
+            8 => &self.memory.V8,
+            9 => &self.memory.V9,
+            10 => &self.memory.V10,
+            11 => &self.memory.V11,
+            12 => &self.memory.V12,
+            13 => &self.memory.V13,
+            14 => &self.memory.V14,
+            15 => &self.memory.V15,
+            _ => panic!("Invalid register ID: {}", reg_id_1),
+        };
+
+        let register_2 = match reg_id_2 {
+            0 => &self.memory.V0,
+            1 => &self.memory.V1,
+            2 => &self.memory.V2,
+            3 => &self.memory.V3,
+            4 => &self.memory.V4,
+            5 => &self.memory.V5,
+            6 => &self.memory.V6,
+            7 => &self.memory.V7,
+            8 => &self.memory.V8,
+            9 => &self.memory.V9,
+            10 => &self.memory.V10,
+            11 => &self.memory.V11,
+            12 => &self.memory.V12,
+            13 => &self.memory.V13,
+            14 => &self.memory.V14,
+            15 => &self.memory.V15,
+            _ => panic!("Invalid register ID: {}", reg_id_2),
+        };
+
+        if register_1.data != register_2.data {
+            self.increment_pc();
+        }
+    }
+
+    fn value_not_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
+        let register = match reg_id {
+            0 => &self.memory.V0,
+            1 => &self.memory.V1,
+            2 => &self.memory.V2,
+            3 => &self.memory.V3,
+            4 => &self.memory.V4,
+            5 => &self.memory.V5,
+            6 => &self.memory.V6,
+            7 => &self.memory.V7,
+            8 => &self.memory.V8,
+            9 => &self.memory.V9,
+            10 => &self.memory.V10,
+            11 => &self.memory.V11,
+            12 => &self.memory.V12,
+            13 => &self.memory.V13,
+            14 => &self.memory.V14,
+            15 => &self.memory.V15,
+            _ => panic!("Invalid register ID: {}", reg_id),
+        };
+
+        if register.data != compared_val {
+            self.increment_pc();
+        }
+    }
+
     fn byte_skip_instruction(&self) {
         
     }
@@ -115,9 +188,12 @@ impl Chip8 {
             2 => self.call_address(),
             3 => {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
-                self.compare_value_to_register_value(value, nibble_3 as u8);
+                self.value_equals_register_value(value, nibble_3 as u8);
             }
-            4 => self.byte_skip_instruction(),
+            4 => {
+                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
+                self.value_not_equals_register_value(value as u8, nibble_3 as u8);
+            }
             5 => self.skip_instruction_if(),
             6 => self.set_value_at_register(),
             7 => self.add_byte_operation(),
