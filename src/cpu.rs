@@ -1,4 +1,4 @@
-use crate::register::{Register, RegisterI};
+use crate::{memory::Memory, register::{Register, RegisterI}};
 
 pub struct CPU {
     V0: Register,
@@ -145,6 +145,44 @@ impl CPU {
 
         let val = vy.data - vx.data;
         vx.data = val;
+    }
+
+    pub fn store_delay_timer_in_vx(&mut self, reg_id: u8) {
+        let mut register = self.get_vx_register_by_id(reg_id);
+        register.data = self.dt_reg.data;
+    }
+
+    pub fn store_vx_in_delay_timer(&mut self, reg_id: u8) {
+        let mut register = self.get_vx_register_by_id(reg_id);
+        self.dt_reg.data = register.data;
+    }
+
+    pub fn add_vx_to_register_i(&mut self, reg_id: u8) {
+        let mut register = self.get_vx_register_by_id(reg_id);
+        let i_val = self.regI.data;
+        self.regI.data = i_val + register.data;
+    }
+
+    pub fn ld_store_in_memory(&mut self, memory: Memory) {
+        let cur_addr = self.regI.data;
+        for id_r in 0..15 {
+            let reg = self.get_vx_register_by_id(id_r);
+            memory.data[cur_addr] = reg.data;
+            cur_addr += 1;
+        }
+    }
+
+    pub fn ld_read_in_memory(&mut self, memory: Memory) {
+        let cur_addr = self.regI.data;
+        for id_r in 0..15 {
+            let reg = self.get_vx_register_by_id(id_r);
+            reg.data = memory.data[cur_addr];
+        }
+    }
+
+    pub fn store_vx_in_sound_timer(&mut self, reg_id: u8) {
+        let mut register = self.get_vx_register_by_id(reg_id);
+        self.st_reg.data = register.data;
     }
 
     pub fn subn_values(&mut self, x: u8, y: u8) {
