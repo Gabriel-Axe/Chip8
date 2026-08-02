@@ -46,7 +46,6 @@ impl Chip8 {
         }
     }
 
-
     fn set_value_of_pc(&mut self, value: u16) {
         self.memory.pc = value;
     }
@@ -119,7 +118,9 @@ impl Chip8 {
     }
 
     fn call_subroutine_at_address(&mut self, address: u16) {
-        
+        self.cpu.increment_sp();
+        self.memory.stack[self.cpu.get_sp()] = self.cpu.get_pc();
+        self.cpu.set_program_counter_to_address(address);
     }
 
     fn jump_to_machine_code(&self) {

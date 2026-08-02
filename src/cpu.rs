@@ -87,7 +87,106 @@ impl CPU {
         self.pc = address;
     }
 
+    pub fn increment_sp(&mut self) {
+        self.sp += 1;
+    }
+
+    pub fn decrement_sp(&mut self) {
+        self.sp -= 1;
+    }
+
+    pub fn get_sp(&mut self) -> u8 {
+        self.sp
+    }
+
+    pub fn get_pc(&mut self) -> u8 {
+        self.sp
+    }
+
     pub fn increment_pc(&mut self) {
         self.pc += 1;
+    }
+
+    pub fn or_values(self, x: u8, y: u8) -> u8 {
+        x | y
+    }
+
+    pub fn and_values(self, x: u8, y: u8) -> u8 {
+        x & y
+    }
+
+    pub fn xor_values(self, x: u8, y: u8) -> u8 {
+        let v1 = self.nand(!x, y);
+        let v2 = self.nand(x, !y);
+        self.nand(v1, v2)
+    }
+
+    pub fn add_values(&mut self, x: u8, y: u8) {
+        let mut vx = self.get_vx_register_by_id(x);
+        let vy = self.get_vx_register_by_id(y);
+        let mut vf = self.VF;
+
+        if (vx.data + vy.data) > 255 {
+            vf.data = 1;
+        }
+
+        let val = vx.data + vy.data;
+        vx.data = val;
+    }
+
+    pub fn sub_values(&mut self, x: u8, y: u8) {
+        let mut vx = self.get_vx_register_by_id(x);
+        let vy = self.get_vx_register_by_id(y);
+        let mut vf = self.VF;
+
+        if vx.data > vy.data {
+            vf.data = 1;
+        }
+
+        let val = vy.data - vx.data;
+        vx.data = val;
+    }
+
+    pub fn subn_values(&mut self, x: u8, y: u8) {
+        let mut vx = self.get_vx_register_by_id(x);
+        let vy = self.get_vx_register_by_id(y);
+        let mut vf = self.VF;
+
+        if vx.data > vy.data {
+            vf.data = 1;
+        }
+
+        let val = vx.data - vy.data;
+        vx.data = val;
+    }
+
+    pub fn shr_values(&mut self, x: u8) {
+        let mut vx = self.get_vx_register_by_id(x);
+        let mut vf = self.VF;
+
+        if vx.data & 1 == 1 {
+            vf.data = 1;
+        } else {
+            vf.data = 0;
+        }
+
+        vx.data = vx.data / 2;
+    }
+
+    pub fn shl_values(&mut self, x: u8) {
+        let mut vx = self.get_vx_register_by_id(x);
+        let mut vf = self.VF;
+
+        if vx.data & 1 == 1 {
+            vf.data = 1;
+        } else {
+            vf.data = 0;
+        }
+
+        vx.data = vx.data * 2;
+    }
+
+    fn nand(&self, x: u8, y: u8) -> u8 {
+        !(x & y)
     }
 }
