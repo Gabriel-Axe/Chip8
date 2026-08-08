@@ -17,7 +17,7 @@ fn main() {
 
 fn emulator() {
     let blitz = load_rom("Blitz [David Winter].ch8");
-    let chip8 = Chip8::new();
+    let mut chip8 = Chip8::new();
     chip8.interpret(&blitz);
 }
 

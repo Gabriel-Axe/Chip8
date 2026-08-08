@@ -24,58 +24,58 @@ impl Chip8 {
     }
 
     fn jump_offset_by_v0(&mut self) {
+        let v0_data = self.cpu.get_register_data(0);
         let mut cur_addr = self.get_pc_address();
-        let v0 = self.cpu.get_vx_register_by_id(0);
-        self.jump_to_address(cur_addr + v0.data as u16);
+        self.jump_to_address(cur_addr + v0_data as u16);
     }
 
     fn skip_instruction_if_equal(&mut self, reg_id: u8, value: u8) {
-        let register = self.cpu.get_vx_register_by_id(reg_id);
-        if register.data == value {
+        let register_data = self.cpu.get_register_data(reg_id as usize as usize);
+        if register_data == value {
             self.cpu.increment_pc();
         }
     }
 
     fn skip_instruction_if_nequal(&mut self, reg_id: u8, value: u8) {
-        let register = self.cpu.get_vx_register_by_id(reg_id);
-        if register.data != value {
+        let register_data = self.cpu.get_register_data(reg_id as usize);
+        if register_data != value {
             self.cpu.increment_pc();
         }
     }
 
     fn set_value_of_pc(&mut self, value: u16) {
-        self.memory.pc = value;
+        self.cpu.set_program_counter_to_value(value);
     }
 
     fn reset_pc(&mut self) {
-        self.memory.pc = 0;
+        self.cpu.reset_pc();
     }
 
     fn get_pc_address(&self) -> u16 {
-        self.memory.pc
+        self.get_pc_address()
     }
 
     fn value_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
-        let register = ;
-
-        if register.data == compared_val {
-            self.increment_pc();
-        }
+        // let register = ;
+        //
+        // if register.data == compared_val {
+        //     self.increment_pc();
+        // }
     }
 
     fn compare_registers_values(&mut self, reg_id_1: u8, reg_id_2: u8) {
-        let register_1 = self.cpu.get_vx_register_by_id(reg_id_1);
-        let register_2 = self.cpu.get_vx_register_by_id(reg_id_2);
+        let register_1_data = self.cpu.get_register_data(reg_id_1 as usize);
+        let register_2_data = self.cpu.get_register_data(reg_id_2 as usize);
 
-        if register_1.data != register_2.data {
-            self.increment_pc();
+        if register_1_data != register_2_data {
+            self.cpu.increment_pc();
         }
     }
 
     fn value_not_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
-        let register = self.cpu.get_vx_register_by_id(reg_id);
-        if register.data != compared_val {
-            self.increment_pc();
+        let register_data = self.cpu.get_register_data(reg_id as usize);
+        if register_data != compared_val {
+            self.cpu.increment_pc();
         }
     }
 
@@ -84,23 +84,23 @@ impl Chip8 {
     }
 
     fn set_value_at_register(&mut self, reg_id: u8, value: u8) {
-        let mut register = self.cpu.get_vx_register_by_id(reg_id);
-        register.data = value;
+        let mut register_data = self.cpu.get_register_data(reg_id as usize);
+        register_data = value;
     }
 
     fn add_byte_operation(&mut self, reg_id: u8, value: u8) {
-        let mut register = self.cpu.get_vx_register_by_id(reg_id);
-        let data = register.data;
-        register.data = data + value;
+        let mut register_data = self.cpu.get_register_data(reg_id as usize);
+        let data = register_data;
+        register_data = data + value;
     }
 
     fn and_number_to_random_value(&mut self, reg_id: u8, and_val: u8) {
         let mut rng = rng();
 
-        let mut register = self.cpu.get_vx_register_by_id(reg_id);
+        let mut register_data = self.cpu.get_register_data(reg_id as usize);
         let val = rng.next_u32() as u8;
         let result_val = and_val & val;
-        register.data = result_val;
+        register_data = result_val;
     }
 
     fn display_spryte(&self) {
@@ -116,7 +116,9 @@ impl Chip8 {
 
     fn call_subroutine_at_address(&mut self, address: u16) {
         self.cpu.increment_sp();
-        self.memory.stack[self.cpu.get_sp()] = self.cpu.get_pc();
+        let sp_val = self.cpu.get_sp() as u16;
+        self.memory.stack[sp_val as usize] = self.cpu.get_pc() as u16; // WARN: Not same byte
+                                                                       // size
         self.cpu.set_program_counter_to_address(address);
     }
 
@@ -125,7 +127,7 @@ impl Chip8 {
     }
 
     fn set_register_i(&mut self, value: u16) {
-        self.memory.regI.data = value;
+        self.cpu.regI.data = value;
     }
 
     fn read_instruction(&mut self, mut instruction: u16) {
@@ -137,7 +139,7 @@ impl Chip8 {
 
         match inst_type {
             0 => self.clear_screen(),
-            1 => self.jump_to_address(),
+            1 => self.jump_to_address(self.cpu.regI.data), // WARN: Assuming I is for addresses...
             2 => self.call_address(),
             3 => {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
@@ -169,11 +171,11 @@ impl Chip8 {
             11 => {
                 self.jump_offset_by_v0()
             }
-            12 => self.and_number_to_random_value(),
+            // 12 => self.and_number_to_random_value(),
             13 => self.display_spryte(),
             _ => return
         }
-        self.increment_pc();
+        self.cpu.increment_pc();
     }
 
     pub fn interpret(&mut self, instructions: &Vec<u16>) {
