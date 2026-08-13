@@ -46,3 +46,21 @@ pub fn join_2_nibbles_into_u8(nibble_1: u8, nibble_2: u8) -> u8 {
 pub fn join_3_nibbles_into_u8(nibble_1: u8, nibble_2: u8, nibble_3: u8) -> u8 {
     nibble_1 + nibble_2 + nibble_3
 }
+
+// pub fn create_u32_vec_from_bool(bool_vec: Vec<bool>) -> Vec<u32> {
+pub fn create_u32_vec_from_bool(bool_vec: Vec<bool>) -> Vec<u32> {
+    let mut integer_vec: Vec<u32> = vec![0; bool_vec.len()];
+    for val in 0..bool_vec.len() {
+        let cur_val = bool_vec[val];
+        if cur_val != false {
+            integer_vec[val] = from_u8_rgb(255, 255, 255);
+        }
+    }
+
+    return integer_vec;
+}
+
+pub fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
+    let (r, g, b) = (r as u32, g as u32, b as u32);
+    (r << 16) | (g << 8) | b
+}

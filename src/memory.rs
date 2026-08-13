@@ -1,5 +1,5 @@
 pub struct Memory {
-    pub data: [u8; 4096],
+    pub data: [u16; 4096],
     pub stack: [u16; 16],
 }
 

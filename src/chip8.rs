@@ -1,4 +1,4 @@
-use crate::{cpu::CPU, memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
+use crate::{cpu::CPU, memory::Memory, util::{from_u8_rgb, get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
 use minifb::{Key, Window, WindowOptions};
 use rand::{Rng, rng};
@@ -12,13 +12,9 @@ pub struct Chip8 {
     cpu: CPU,
     memory: Memory,
     display: Window,
-    display_buffer: Vec<u32>,
+    display_buffer: Vec<bool>,
 }
 
-fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
-    let (r, g, b) = (r as u32, g as u32, b as u32);
-    (r << 16) | (g << 8) | b
-}
 
 impl Chip8 {
     pub fn new() -> Chip8 { 
@@ -34,7 +30,7 @@ impl Chip8 {
         window.set_target_fps(60);
 
         let azure_blue = from_u8_rgb(0, 127, 255);
-        let mut buffer: Vec<u32> = vec![azure_blue; BUFFER_WIDTH * BUFFER_HEIGHT];
+        let mut buffer: Vec<bool> = vec![false; BUFFER_WIDTH * BUFFER_HEIGHT];
 
         Chip8 {
             cpu: CPU::new(),
@@ -138,8 +134,12 @@ impl Chip8 {
         register_data = result_val;
     }
 
-    fn display_spryte(&self) {
-        
+    fn display_sprite(&self, n_bytes: u8) {
+        let starting_addr = self.cpu.regI.data;
+        for addr in starting_addr..n_bytes  {
+            let mem_val = self.memory.data[addr];
+            self.display_buffer[mem_val] = 
+        }
     }
 
     fn store_from_register_x_into_y(&self) {
@@ -207,7 +207,7 @@ impl Chip8 {
                 self.jump_offset_by_v0()
             }
             // 12 => self.and_number_to_random_value(),
-            13 => self.display_spryte(),
+            13 => self.display_sprite(),
             _ => return
         }
         self.cpu.increment_pc();
@@ -224,11 +224,12 @@ impl Chip8 {
     }
 
     fn update(&mut self) {
-            self.display
-                .update_with_buffer(&self.display_buffer, BUFFER_WIDTH, BUFFER_HEIGHT)
-                .unwrap_or_else(|e| {
-                    panic!("Could not update display: {}", e)
-                });
+        let buffer: Vec<u32> = self.display_buffer.into();
+        self.display
+            .update_with_buffer(&self.display_buffer, BUFFER_WIDTH, BUFFER_HEIGHT)
+            .unwrap_or_else(|e| {
+                panic!("Could not update display: {}", e)
+            });
     }
 
     pub fn interpret(&mut self) {
