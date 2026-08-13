@@ -17,6 +17,12 @@ impl Chip8 {
         }
     }
 
+    // fn load_rom(filename: &str) -> Vec<u16> {
+    //     // let file = fs::read(filename).expect("Could not load ROM");
+    //     // let file_as_u16 = convert_bytes_u8_to_u16(&file).expect("Could not convert ROM to u16");
+    //     // file_as_u16
+    // }
+
     fn clear_screen(&self) {
         
     }
@@ -180,9 +186,13 @@ impl Chip8 {
         self.cpu.increment_pc();
     }
 
-    pub fn interpret(&mut self, instructions: &Vec<u16>) {
-        for &inst in instructions {
-            self.read_instruction(inst);
-        }
+    fn load_rom () {
+        
+    }
+
+    pub fn interpret(&mut self) {
+        // for &inst in instructions {
+        //     self.read_instruction(inst);
+        // }
     }
 }
