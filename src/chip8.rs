@@ -453,6 +453,21 @@ impl Chip8 {
         }
     }
 
+    fn mirror_bits(&self, mut val: u8) -> u8 {
+        val = ((val & 0xaa) >> 1) | ((val & 0x55) << 1);
+        val = ((val & 0xcc) >> 2) | ((val & 0x33) << 2);
+        val
+    }
+
+    pub fn draw_line_from_u8(&mut self, x: u8, y: u8, sprite_val: u8) {
+        let true_val = self.mirror_bits(sprite_val);
+        for i in 0..8 {
+            if (true_val >> i) & 1 == 1 {
+                self.draw_pixel(x + i, y);
+            }
+        }
+    }
+
     pub fn draw_h_line(&mut self) {
         let start_x = 10;
         let end_x = 40;
