@@ -3,18 +3,38 @@ use crate::{cpu::CPU, memory::Memory, util::{from_u8_rgb, get_instruction_nibble
 use minifb::{Key, Window, WindowOptions};
 use rand::{Rng, rng};
 
-const WINDOW_WIDTH: usize = 1920;
-const WINDOW_HEIGHT: usize = 1080;
+const WINDOW_WIDTH: usize = 1920 / 3;
+const WINDOW_HEIGHT: usize = 1080 / 3;
 const BUFFER_WIDTH: usize = 40;
 const BUFFER_HEIGHT: usize = 30;
+
+const KEY_0: u8 = 0;
+const KEY_1: u8 = 1;
+const KEY_2: u8 = 2;
+const KEY_3: u8 = 3;
+const KEY_4: u8 = 4;
+const KEY_5: u8 = 5;
+const KEY_6: u8 = 6;
+const KEY_7: u8 = 7;
+const KEY_8: u8 = 8;
+const KEY_9: u8 = 9;
+const KEY_A: u8 = 10;
+const KEY_B: u8 = 11;
+const KEY_C: u8 = 12;
+const KEY_D: u8 = 13;
+const KEY_E: u8 = 14;
+const KEY_F: u8 = 15;
+
+ 
 
 pub struct Chip8 {
     cpu: CPU,
     memory: Memory,
     display: Window,
-    display_buffer: Vec<bool>,
+    // display_buffer: Vec<bool>,
+    display_buffer: Vec<u32>,
+    keys: Vec<u8>,
 }
-
 
 impl Chip8 {
     pub fn new() -> Chip8 { 
@@ -30,13 +50,32 @@ impl Chip8 {
         window.set_target_fps(60);
 
         let azure_blue = from_u8_rgb(0, 127, 255);
-        let mut buffer: Vec<bool> = vec![false; BUFFER_WIDTH * BUFFER_HEIGHT];
+        // let mut buffer: Vec<bool> = vec![false; BUFFER_WIDTH * BUFFER_HEIGHT];
+        let mut buffer: Vec<u32> = vec![azure_blue; BUFFER_WIDTH * BUFFER_HEIGHT];
 
         Chip8 {
             cpu: CPU::new(),
             memory: Memory::new(),
             display: window,
             display_buffer: buffer,
+            keys: vec![
+                KEY_0,
+                KEY_1,
+                KEY_2,
+                KEY_3,
+                KEY_4,
+                KEY_5,
+                KEY_6,
+                KEY_7,
+                KEY_8,
+                KEY_9,
+                KEY_A,
+                KEY_B,
+                KEY_C,
+                KEY_D,
+                KEY_E,
+                KEY_F,
+            ]
         }
     }
 
@@ -58,6 +97,20 @@ impl Chip8 {
         let v0_data = self.cpu.get_register_data(0);
         let mut cur_addr = self.get_pc_address();
         self.jump_to_address(cur_addr + v0_data as u16);
+    }
+
+    fn skip_instruction_if_vx_equal_keyboard_pressed(&mut self, reg_id: u8) {
+        let vx_data = self.cpu.get_register_data(reg_id as usize);
+        if self.keys.contains(&vx_data) {
+            self.cpu.increment_pc();
+        }
+    }
+
+    fn skip_instruction_if_vx_not_equal_keyboard_pressed(&mut self, reg_id: u8) {
+        let vx_data = self.cpu.get_register_data(reg_id as usize);
+        if !self.keys.contains(&vx_data) {
+            self.cpu.increment_pc();
+        }
     }
 
     fn skip_instruction_if_equal(&mut self, reg_id: u8, value: u8) {
@@ -134,13 +187,13 @@ impl Chip8 {
         register_data = result_val;
     }
 
-    fn display_sprite(&self, n_bytes: u8) {
-        let starting_addr = self.cpu.regI.data;
-        for addr in starting_addr..n_bytes  {
-            let mem_val = self.memory.data[addr];
-            self.display_buffer[mem_val] = 
-        }
-    }
+    // fn display_sprite(&self, n_bytes: u8) {
+    //     let starting_addr = self.cpu.regI.data;
+    //     for addr in starting_addr..n_bytes  {
+    //         let mem_val = self.memory.data[addr];
+    //         self.display_buffer[mem_val] = 
+    //     }
+    // }
 
     fn store_from_register_x_into_y(&self) {
         
@@ -207,7 +260,15 @@ impl Chip8 {
                 self.jump_offset_by_v0()
             }
             // 12 => self.and_number_to_random_value(),
-            13 => self.display_sprite(),
+            // 13 => self.display_sprite(),
+            14 => {
+                if nibble_2 == 9 && nibble_1 == 14 {
+                    self.skip_instruction_if_vx_equal_keyboard_pressed(nibble_3 as u8);
+                }
+                if nibble_2 == 10 && nibble_1 == 1 {
+                    self.skip_instruction_if_vx_not_equal_keyboard_pressed(nibble_3 as u8);
+                }
+            }
             _ => return
         }
         self.cpu.increment_pc();
@@ -220,11 +281,16 @@ impl Chip8 {
     pub fn run(&mut self) {
         while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
             self.update();
+
+            let keys = self.display.get_keys_pressed(minifb::KeyRepeat::No);
+            for key in keys {
+                println!("{:?}", key);
+            }
         }
     }
 
     fn update(&mut self) {
-        let buffer: Vec<u32> = self.display_buffer.into();
+        // let buffer: Vec<u32> = self.display_buffer.into();
         self.display
             .update_with_buffer(&self.display_buffer, BUFFER_WIDTH, BUFFER_HEIGHT)
             .unwrap_or_else(|e| {
