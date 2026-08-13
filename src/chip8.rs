@@ -1,19 +1,46 @@
 use crate::{cpu::CPU, memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
-use minifb::Window;
-use rand::{Rng, RngExt, rng};
+use minifb::{Key, Window, WindowOptions};
+use rand::{Rng, rng};
+
+const WINDOW_WIDTH: usize = 1920;
+const WINDOW_HEIGHT: usize = 1080;
+const BUFFER_WIDTH: usize = 40;
+const BUFFER_HEIGHT: usize = 30;
 
 pub struct Chip8 {
     cpu: CPU,
     memory: Memory,
-    // display: Window
+    display: Window,
+    display_buffer: Vec<u32>,
+}
+
+fn from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
+    let (r, g, b) = (r as u32, g as u32, b as u32);
+    (r << 16) | (g << 8) | b
 }
 
 impl Chip8 {
     pub fn new() -> Chip8 { 
+        let mut window = Window::new(
+            "Chip 8",
+            WINDOW_WIDTH,
+            WINDOW_HEIGHT,
+            WindowOptions::default())
+            .unwrap_or_else(|e| {
+                panic!("Could not create emulator window: {}", e)
+            });
+
+        window.set_target_fps(60);
+
+        let azure_blue = from_u8_rgb(0, 127, 255);
+        let mut buffer: Vec<u32> = vec![azure_blue; BUFFER_WIDTH * BUFFER_HEIGHT];
+
         Chip8 {
             cpu: CPU::new(),
-            memory: Memory::new()
+            memory: Memory::new(),
+            display: window,
+            display_buffer: buffer,
         }
     }
 
@@ -188,6 +215,20 @@ impl Chip8 {
 
     fn load_rom () {
         
+    }
+
+    pub fn run(&mut self) {
+        while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
+            self.update();
+        }
+    }
+
+    fn update(&mut self) {
+            self.display
+                .update_with_buffer(&self.display_buffer, BUFFER_WIDTH, BUFFER_HEIGHT)
+                .unwrap_or_else(|e| {
+                    panic!("Could not update display: {}", e)
+                });
     }
 
     pub fn interpret(&mut self) {
