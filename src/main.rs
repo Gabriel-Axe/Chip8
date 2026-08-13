@@ -17,9 +17,11 @@ mod util;
 //     pixels: Option<Pixels<'static>>,
 // }
 
-const WIDTH: usize = 30;
-const HEIGHT: usize = 30;
-const SCALE: usize = 10;
+const WINDOW_WIDTH: usize = 800;
+const WINDOW_HEIGHT: usize = 600;
+const BUFFER_WIDTH: usize = 400;
+const BUFFER_HEIGHT: usize = 600;
+// const SCALE: usize = 10;
 // const WIDTH: usize = 64;
 // const HEIGHT: usize = 32;
 // const SCALE: usize = 10;
@@ -116,41 +118,56 @@ fn rgb(r: u8, g:u8, b:u8) -> u32 {
     ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
 }
 
+fn new_window() {
+    
+}
+
 fn main() {
 
     let mut window = Window::new(
         "Test - ESC to exit",
-        WIDTH,
-        HEIGHT,
+        WINDOW_WIDTH,
+        WINDOW_HEIGHT,
         WindowOptions::default(),
     )
     .unwrap_or_else(|e| {
         panic!("AAAAAAAAAAAAAAAAAAAAAAAAAA {}", e);
     });
 
-    let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
+    let mut buffer: Vec<u32> = vec![0; BUFFER_WIDTH * BUFFER_HEIGHT];
     window.set_target_fps(60);
 
+    let mut cur_red = 0;
+    let mut cur_blue = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         buffer.fill(rgb(0, 0, 0));
-
-        for x in 0..WIDTH {
-            for y in 0..WIDTH {
-                if x == 0 || x == WIDTH - 1 || y == 0 || y == HEIGHT - 1 {
-                    buffer[y * WIDTH + x] = rgb(255, 255, 255);
-                }
-            }
-        }
-
-        let center_x = WIDTH / 2;
-        let center_y = HEIGHT / 2;
-        buffer[center_y * WIDTH + center_x ] = rgb(255, 0, 0);
+        fill_window_buffer(&mut buffer, 255);
+        let center_x = WINDOW_WIDTH / 2;
+        let center_y = WINDOW_HEIGHT / 2;
+        // buffer[center_y * WIDTH + center_x ] = rgb(255, 0, 0);
+        // buffer[center_y + center_x ] = rgb(255, 0, 0);
+        // buffer[center_y * WIDTH + center_x ] = rgb(255, 0, 0);
 
         window
-            .update_with_buffer(&buffer, WIDTH , HEIGHT )
+            .update_with_buffer(&buffer, BUFFER_WIDTH , WINDOW_HEIGHT )
             .expect("Failed to update winodw");
-
         }
+}
+
+// fn fill_window_buffer(buffer: &mut Vec<u32>, width: usize, height: usize, color: u8) {
+fn fill_window_buffer(buffer: &mut Vec<u32>, color: u8) {
+    let x_loop = BUFFER_WIDTH - 1;
+    let y_loop = BUFFER_HEIGHT - 1;
+    for x in 0..x_loop {
+        for y in 0..y_loop {
+            if x == 0 || x == BUFFER_WIDTH - 1 || y == 0 || y == BUFFER_HEIGHT - 1 {
+                // buffer[y * WIDTH + x] = rgb(color, color, color);
+                buffer[y] = rgb(255, 0, 0);
+            }
+            // cur_blue += 1;
+        }
+        // cur_red += 1;
+    }
 }
 
 fn emulator() {

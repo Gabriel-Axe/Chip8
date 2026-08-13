@@ -1,10 +1,12 @@
 use crate::{cpu::CPU, memory::Memory, util::{get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
+use minifb::Window;
 use rand::{Rng, RngExt, rng};
 
 pub struct Chip8 {
     cpu: CPU,
     memory: Memory,
+    // display: Window
 }
 
 impl Chip8 {
