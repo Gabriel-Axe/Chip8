@@ -4,7 +4,7 @@ pub fn print_bytes_in_16_binary(bytes: &Vec<u16>) {
     }
 }
 
-pub fn get_instruction_nibble(byte: u16) -> u16 {
+pub fn get_instruction_nibble(byte: &u16) -> u16 {
     // NOTE: 61440 is equivalent to 1111 0000 0000 0000
     return (byte & 61440) >> 4
 }

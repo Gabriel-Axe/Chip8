@@ -1,4 +1,0 @@
-1. Pegar valores na memória nas posições de I até I + n
-2. Valores carregados devem ser Xor'ado com valores atualmente na tela
-1. Cada byte é carregado na largura X e altura Y
-3. Se algum valor ser Not'd, vF = 1

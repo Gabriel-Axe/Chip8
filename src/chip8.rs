@@ -1,3 +1,5 @@
+use std::{fs, path::PathBuf};
+
 use crate::{cpu::CPU, memory::Memory, util::{from_u8_rgb, from_u8_to_bin_color, get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
 use minifb::{Key::{self, Key0}, Window, WindowOptions};
@@ -32,9 +34,32 @@ pub struct Chip8 {
     // display_buffer: Vec<bool>,
     display_buffer: Vec<u32>,
     keys: Vec<u8>,
+    rom: Vec<u16>,
 }
 
 impl Chip8 {
+
+    pub fn load_rom(&mut self, filename: &str) {
+        let mut path = PathBuf::from("roms/chip8-roms/games");
+        path.push(filename);
+
+        let file  = fs::read(&path)
+            .unwrap_or_else(|err| {
+                panic!("Could not load ROM: {}, reason: {}", path.display(), err)
+            });
+    
+        let mut rom: Vec<u16> = Vec::new();
+        for i in (0..file.len()).step_by(2) {
+            if i + 1 < file.len() {
+                let instruction = ((file[i] as u16) << 8) | (file[i + 1] as u16);
+                rom.push(instruction);
+            }
+        }
+        
+        self.rom = rom;
+    }
+
+
     pub fn new() -> Chip8 { 
         let mut window = Window::new(
             "Chip 8",
@@ -51,9 +76,22 @@ impl Chip8 {
         // let red = from_u8_rgb(255, 127, 0);
         // let mut buffer: Vec<bool> = vec![false; BUFFER_WIDTH * BUFFER_HEIGHT];
         let mut buffer: Vec<u32> = vec![0; BUFFER_WIDTH * BUFFER_HEIGHT];
+        // buffer[66] = from_u8_to_bin_color(255);
+        // buffer[64] = from_u8_to_bin_color(255);
+        // buffer[63] = from_u8_to_bin_color(255);
+        // buffer[10] = from_u8_to_bin_color(255);
+        // buffer[74] = from_u8_to_bin_color(255);
 
-        // for i in 0..buffer.len() {
+        // for i in 256..544 {
         //     buffer[i] = from_u8_to_bin_color(i as u8);
+        // }
+        // let mut aaa = 0;
+        // for i in 256..544 {
+        //     if aaa == 4 {
+        //     aaa = 0;
+        //     buffer[i] = from_u8_to_bin_color(i as u8);
+        //     }
+        //     aaa += 1;
         // }
 
         Chip8 {
@@ -61,6 +99,7 @@ impl Chip8 {
             memory: Memory::new(),
             display: window,
             display_buffer: buffer,
+            rom: Vec::new(),
             keys: vec![
                 KEY_0,
                 KEY_1,
@@ -81,12 +120,6 @@ impl Chip8 {
             ]
         }
     }
-
-    // fn load_rom(filename: &str) -> Vec<u16> {
-    //     // let file = fs::read(filename).expect("Could not load ROM");
-    //     // let file_as_u16 = convert_bytes_u8_to_u16(&file).expect("Could not convert ROM to u16");
-    //     // file_as_u16
-    // }
 
     fn clear_screen(&self) {
         
@@ -150,7 +183,7 @@ impl Chip8 {
         // }
     }
 
-    fn compare_registers_values(&mut self, reg_id_1: u8, reg_id_2: u8) {
+    pub fn compare_registers_values(&mut self, reg_id_1: u8, reg_id_2: u8) {
         let register_1_data = self.cpu.get_register_data(reg_id_1 as usize);
         let register_2_data = self.cpu.get_register_data(reg_id_2 as usize);
 
@@ -297,7 +330,7 @@ impl Chip8 {
         }
     }
 
-    fn read_instruction(&mut self, mut instruction: u16) {
+    fn read_instruction(&mut self, mut instruction: &u16) {
         let inst_type = get_instruction_nibble(instruction);
 
         let nibble_3 = instruction >> 3;
@@ -378,12 +411,9 @@ impl Chip8 {
         self.cpu.increment_pc();
     }
 
-    fn load_rom () {
-        
-    }
-
     pub fn run(&mut self) {
         while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
+            self.interpret();
             self.update();
 
             let keys = self.display.get_keys_pressed(minifb::KeyRepeat::No);
@@ -403,8 +433,58 @@ impl Chip8 {
     }
 
     pub fn interpret(&mut self) {
-        // for &inst in instructions {
-        //     self.read_instruction(inst);
-        // }
+        let mut copy_vec: Vec<u16> = Vec::new();
+        copy_vec.resize(self.rom.len(), 0);
+        copy_vec.copy_from_slice(self.rom.as_slice());
+        for instruction in copy_vec {
+            self.read_instruction(&instruction);
+        }
+    }
+
+    pub fn draw_square(&mut self) {
+        let start_x = 10;
+        let end_x = 40;
+        let start_y = 10;
+        let end_y = 20;
+        for x in start_x..end_x {
+            for y in start_y..end_y {
+                self.draw_pixel(x, y);
+            }
+        }
+    }
+
+    pub fn draw_h_line(&mut self) {
+        let start_x = 10;
+        let end_x = 40;
+        let y = 32;
+        for x in start_x..end_x {
+            self.draw_pixel(x, y);
+        }
+    }
+
+    pub fn draw_v_line(&mut self) {
+        let start_y = 6;
+        let end_y = 28;
+        let x = 54;
+        for y in start_y..end_y {
+            self.draw_pixel(x, y);
+        }
+    }
+
+    pub fn draw_pixel(&mut self, x: u8, y: u8) {
+        if x < 0 || x > BUFFER_WIDTH as u8 || y < 0 || y > BUFFER_HEIGHT as u8 {
+            panic!("Pixel out of buffer");
+        }
+        let x_loc: usize = (x - 1) as usize;
+        let y_loc: usize = (BUFFER_WIDTH * y as usize) - BUFFER_WIDTH;
+        let loc = x_loc + y_loc;
+        self.invert_pixel(loc);
+    }
+
+    fn invert_pixel(&mut self, loc: usize) {
+        if self.display_buffer[loc as usize] != 0 {
+            self.display_buffer[loc as usize] = 0;
+        }
+        self.display_buffer[loc as usize] = from_u8_to_bin_color(255);
     }
 }
