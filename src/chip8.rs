@@ -226,18 +226,17 @@ impl Chip8 {
     fn display_sprite(&mut self, x: u8, y: u8, n_bytes: u8) {
         let starting_addr = self.cpu.regI.data as u8;
         let mut buffer = self.display_buffer.clone();
+        
+        // WARN: Deveria colocar a flag do VF aqui
         for addr in starting_addr..starting_addr + n_bytes {
             let mem_val = self.memory.data[addr as usize];
-            let cur_vals = buffer[((x * y) + addr) as usize];
-            let new_color = from_u8_to_bin_color(mem_val as u8);
-            let next_vals = (cur_vals | new_color);
-            if next_vals <= 0 {
-                self.cpu.VF.data = 1;
-            }
-            else {
-                self.cpu.VF.data = 1;
-            }
-            buffer[((x * y) + addr) as usize] = next_vals;
+            self.draw_line_from_u8(x, y, mem_val as u8);
+            // if next_vals <= 0 {
+            //     self.cpu.VF.data = 1;
+            // }
+            // else {
+            //     self.cpu.VF.data = 1;
+            // }
         }
 
         self.display_buffer = buffer;
@@ -372,7 +371,7 @@ impl Chip8 {
                 self.jump_offset_by_v0()
             }
             // 12 => self.and_number_to_random_value(),
-            // 13 => self.display_sprite(),
+            13 => self.display_sprite(nibble_3 as u8, nibble_2 as u8, nibble_1 as u8),
             14 => {
                 if nibble_2 == 9 && nibble_1 == 14 {
                     self.skip_instruction_if_vx_equal_keyboard_pressed(nibble_3 as u8);
