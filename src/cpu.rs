@@ -56,6 +56,14 @@ impl CPU {
             self.registers[reg_id].data
         }
 
+    pub fn set_register_data(&mut self, reg_id: usize, val: u8) {
+        if reg_id > self.registers.len() || 0 > reg_id {
+            panic!("Invalid register ID: {}", reg_id);
+        }
+
+        self.registers[reg_id].data = val;
+    }
+
     pub fn set_program_counter_to_address(&mut self, address: u16) {
         self.pc = address;
     }

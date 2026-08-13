@@ -1,12 +1,12 @@
 use crate::{cpu::CPU, memory::Memory, util::{from_u8_rgb, get_instruction_nibble, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
-use minifb::{Key, Window, WindowOptions};
+use minifb::{Key::{self, Key0}, Window, WindowOptions};
 use rand::{Rng, rng};
 
 const WINDOW_WIDTH: usize = 1920 / 3;
 const WINDOW_HEIGHT: usize = 1080 / 3;
-const BUFFER_WIDTH: usize = 40;
-const BUFFER_HEIGHT: usize = 30;
+const BUFFER_WIDTH: usize = 64;
+const BUFFER_HEIGHT: usize = 32;
 
 const KEY_0: u8 = 0;
 const KEY_1: u8 = 1;
@@ -199,7 +199,41 @@ impl Chip8 {
         
     }
 
+    fn set_delay_timer_value_at_vx(&mut self, reg_id: u8) {
+        let val = self.cpu.dt_reg.data;
+        let register = self.cpu.set_register_data(reg_id as usize, self.cpu.dt_reg.data);
+    }
+
+    fn set_delay_timer_value(&mut self, value: u8) {
+        self.cpu.dt_reg.data = value;
+    }
+
+    fn set_sound_timer_value(&mut self, value: u8) {
+        self.cpu.st_reg.data = value;
+    }
+
     fn call_address(&self) {
+    }
+
+    fn increment_vx_to_i(&mut self, reg_id: u8) {
+        let reg_data = self.cpu.get_register_data(reg_id as usize);
+        let i_data = self.cpu.regI.data;
+        self.set_register_i(i_data + reg_data as u16);
+    }
+
+    fn store_registers_in_memory_up_to_vx(&mut self, up_to: u8) {
+        let addr = self.cpu.regI.data;
+        for i in 0..up_to {
+            let reg_data =self.cpu.get_register_data(i as usize);
+            self.memory.data[(addr + i as u16) as usize] = reg_data as u16;
+        }
+    }
+
+    fn store_bcd_of_vx(&mut self, reg_id: u8) {
+        let val = self.cpu.get_register_data(reg_id as usize);
+        let hundreds = (val / 100) % 10;
+        let tens = (val / 10) % 10;
+        let units = val % 10;
     }
 
     fn call_subroutine_at_address(&mut self, address: u16) {
@@ -216,6 +250,36 @@ impl Chip8 {
 
     fn set_register_i(&mut self, value: u16) {
         self.cpu.regI.data = value;
+    }
+
+    fn set_keypress_at_vx(&mut self, reg_id: u8) {
+        // WARN: I must freeze execution until a
+        // key is pressed
+        let key_pressed_vec = self.display.get_keys_pressed(minifb::KeyRepeat::No);
+        let key_pressed = key_pressed_vec
+            .first()
+            .unwrap_or_else(|| {
+                panic!("Could not get the first key pressed")
+            });
+        // WARN: What do i do when 2 keys are pressed?
+        let key = self.keyboard_to_chip8_keyboard(*key_pressed);
+        self.set_value_at_register(reg_id, key);
+    }
+
+    fn keyboard_to_chip8_keyboard(&mut self, key: Key) -> u8 {
+        match key {
+            Key::NumPad0 => KEY_0,
+            Key::NumPad1 => KEY_1,
+            Key::NumPad2 => KEY_2,
+            Key::NumPad3 => KEY_3,
+            Key::NumPad4 => KEY_4,
+            Key::NumPad5 => KEY_5,
+            Key::NumPad6 => KEY_6,
+            Key::NumPad7 => KEY_7,
+            Key::NumPad8 => KEY_8,
+            Key::NumPad9 => KEY_9,
+            _ => { return 0; }
+        }
     }
 
     fn read_instruction(&mut self, mut instruction: u16) {
@@ -267,6 +331,31 @@ impl Chip8 {
                 }
                 if nibble_2 == 10 && nibble_1 == 1 {
                     self.skip_instruction_if_vx_not_equal_keyboard_pressed(nibble_3 as u8);
+                }
+            }
+            15 => {
+                if nibble_2 == 0 && nibble_1 == 7 {
+                    self.set_delay_timer_value_at_vx(nibble_3 as u8);
+                }
+
+                if nibble_2 == 0 && nibble_1 == 10 {
+                    self.set_keypress_at_vx(nibble_3 as u8);
+                }
+
+                if nibble_2 == 1 && nibble_1 == 5 {
+                    self.set_delay_timer_value(nibble_3 as u8);
+                }
+                if nibble_2 == 1 && nibble_1 == 8 {
+                    self.set_delay_timer_value(nibble_3 as u8);
+                }
+                if nibble_2 == 1 && nibble_1 == 14 {
+                    self.increment_vx_to_i(nibble_3 as u8);
+                }
+                if nibble_2 == 3 && nibble_1 == 3 {
+                    self.store_registers_in_memory_up_to_vx(nibble_3 as u8);
+                }
+                if nibble_2 == 5 && nibble_1 == 5 {
+                    self.store_registers_in_memory_up_to_vx(nibble_3 as u8);
                 }
             }
             _ => return
