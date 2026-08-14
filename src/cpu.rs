@@ -1,4 +1,4 @@
-use crate::{memory::Memory, register::{Register, RegisterI}};
+use crate::register::{Register, RegisterI};
 
 pub struct CPU {
     registers: [Register; 16],
@@ -16,6 +16,7 @@ pub struct CPU {
 
 impl CPU {
     pub fn new() -> Self {
+        log::info!("Creating CPU");
         CPU {
             // WARN: Implement `Copy` for register
             registers: [
