@@ -1,10 +1,10 @@
-use crate::register::{Register, RegisterI};
+use crate::{debug_printer::DebugPrinter, memory::Memory, register::{Register, RegisterI}};
 
 pub struct CPU {
     registers: [Register; 16],
 
     pc: u16, // Program Counter
-    sp: u8,
+    stack_pointer: u8,
 
     pub VF: Register, // NOTE: What is this register for?
 
@@ -16,26 +16,10 @@ pub struct CPU {
 
 impl CPU {
     pub fn new() -> Self {
-        log::info!("Creating CPU");
+        DebugPrinter::log_info("create CPU".to_string());
         CPU {
             // WARN: Implement `Copy` for register
-            registers: [
-                Register::new(), // NOTE: 1
-                Register::new(), // NOTE: 2
-                Register::new(), // NOTE: 3
-                Register::new(), // NOTE: 4
-                Register::new(), // NOTE: 5
-                Register::new(), // NOTE: 6
-                Register::new(), // NOTE: 7
-                Register::new(), // NOTE: 8
-                Register::new(), // NOTE: 9
-                Register::new(), // NOTE: 10
-                Register::new(), // NOTE: 11
-                Register::new(), // NOTE: 12
-                Register::new(), // NOTE: 13
-                Register::new(), // NOTE: 14
-                Register::new(), // NOTE: 15
-                Register::new()], // NOTE: 16
+            registers: [Register::new(); 16],
             VF: Register::new(),
 
             regI: RegisterI { data: 0 },
@@ -43,9 +27,13 @@ impl CPU {
             dt_reg: Register::new(),
             st_reg: Register::new(),
 
-            pc: 0, // idk what bytes the PC uses
-            sp: 0, // Stack pointer
+            pc: 0x200,
+            stack_pointer: 0,
         }
+    }
+
+    fn log_cpu_action(action: String) {
+        DebugPrinter::log_action("cpu".to_string(), action);
     }
 
     pub fn get_register_data(&mut self, reg_id: usize) -> u8 {
@@ -56,6 +44,17 @@ impl CPU {
 
             self.registers[reg_id].data
         }
+
+    pub fn fetch_instruction_in_memory(&mut self, memory: &Memory) -> u8 {
+        CPU::log_cpu_action("fetch instruction".to_string());
+        let instruction = memory.fetch_in_address(self.pc, false);
+        self.increment_pc();
+        DebugPrinter::log_state(format!("instruction: 0x{:04X}", instruction));
+        instruction
+        // NOTE: Maybe i could refactor this into the CPU having
+        // a internal instruction management and storing the
+        // instruction instead of passing back to the Chip8
+    }
 
     pub fn set_register_data(&mut self, reg_id: usize, val: u8) {
         if reg_id > self.registers.len() || 0 > reg_id {
@@ -78,22 +77,24 @@ impl CPU {
     }
 
     pub fn increment_sp(&mut self) {
-        self.sp += 1;
+        self.stack_pointer += 1;
     }
 
     pub fn decrement_sp(&mut self) {
-        self.sp -= 1;
+        self.stack_pointer -= 1;
     }
 
     pub fn get_sp(&mut self) -> u8 {
-        self.sp
+        self.stack_pointer
     }
 
     pub fn get_pc(&mut self) -> u8 {
-        self.sp
+        self.stack_pointer
     }
 
     pub fn increment_pc(&mut self) {
+        // WARN: This should not be public
+        CPU::log_cpu_action("increment PC".to_string());
         self.pc += 1;
     }
 

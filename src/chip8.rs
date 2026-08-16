@@ -1,14 +1,9 @@
-use std::{fs, path::PathBuf};
+use std::{any::Any, fs, io::Empty, num::ParseFloatError, path::PathBuf, thread::sleep, time::Duration};
 
-use crate::{cpu::CPU, memory::{Memory}, util::{from_u8_rgb, from_u8_to_bin_color, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
+use crate::{chip8::InstructionType::{CALL, CLS, DRW, JP, JP_B, LD, LD_8, LD_A, LD_BYTE, RET, RND, SE, SE_BYTE, SKNP, SKP, SNE}, cpu::CPU, debug_printer::DebugPrinter, display::Display, memory::Memory, util::{from_u8_rgb, from_u8_to_bin_color, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
 use minifb::{Key::{self, Key0}, Window, WindowOptions};
 use rand::{Rng, rng};
-
-const WINDOW_WIDTH: usize = 1920 / 3;
-const WINDOW_HEIGHT: usize = 1080 / 3;
-const BUFFER_WIDTH: usize = 64;
-const BUFFER_HEIGHT: usize = 32;
 
 const KEY_0: u8 = 0;
 const KEY_1: u8 = 1;
@@ -29,18 +24,60 @@ const KEY_F: u8 = 15;
 
 pub struct Chip8 {
     cpu: CPU,
+    display: Display,
     memory: Memory,
-    display: Window,
-    // display_buffer: Vec<bool>,
-    display_buffer: Vec<u32>,
     keys: Vec<u8>,
+}
+
+pub enum InstructionType {
+    CLS,
+    RET,
+    JP,
+    CALL,
+    SE_BYTE,
+    SNE,
+    SE,
+    LD_BYTE,
+    ADD_BYTE,
+    LD,
+    LD_8,
+    OR,
+    AND,
+    XOR,
+    ADD,
+    SUB,
+    SHR,
+    SUBN,
+    SHL,
+    SNE_9,
+    LD_A,
+    JP_B,
+    RND,
+    DRW,
+    SKP,
+    SKNP,
+    LD_Fx07,
+    LD_Fx0A,
+    LD_Fx15,
+    LD_Fx18,
+    ADD_F,
+    LD_Fx29,
+    LD_Fx33,
+    LD_Fx55,
+    LD_Fx65,
 }
 
 impl Chip8 {
 
+    fn log_chip8_action(action: String) {
+        DebugPrinter::log_action("chip8".to_string(), action);
+    }
+
     pub fn load_rom(&mut self, filename: &str) {
-        log::info!("Loading ROM");
-        let mut path = PathBuf::from("roms/chip8-roms/games");
+        Chip8::log_chip8_action("Loading ROM".to_string());
+        // let mut path = PathBuf::from("roms/chip8-roms/programs");
+        // let mut path = PathBuf::from("test_rom");
+        let mut path = PathBuf::from("test_suite/bin");
         path.push(filename);
 
         let file  = fs::read(&path)
@@ -57,10 +94,16 @@ impl Chip8 {
         }
         
         // WARN: Possibly shows absolute path
-        log::info!("Loaded ROM: {}", filename);
-        for (i, instruction) in rom.iter().enumerate() {
-            self.memory.set_in_address(i as u16, *instruction);
+        for (i, instruction) in rom.iter().enumerate().step_by(2) {
+            let addr = i as u16;
+            // let instr_1 = (instruction & 0b1111) as u8;
+            // let instr_2 = (instruction >> 8) as u8;
+            let high = (instruction >> 8) as u8;
+            let low = (instruction & 0xFF) as u8;
+            self.memory.set_in_address(addr, high);
+            self.memory.set_in_address(addr + 1, low);
         }
+        DebugPrinter::log_info(format!("loaded ROM: {}", filename));
     }
 
     // pub fn log_instructions(&self) {
@@ -69,53 +112,37 @@ impl Chip8 {
     //     }
     // }
 
+    fn nibble_to_instruction_type(&self, instruction: u8) -> Option<InstructionType> {
+
+        return match instruction {
+            0 => Some(CLS),
+            1 => Some(RET),
+            2 => Some(JP),
+            3 => Some(CALL),
+            4 => Some(SE_BYTE),
+            5 => Some(SNE),
+            6 => Some(SE),
+            7 => Some(LD_BYTE),
+            8 => Some(LD_8),
+            9 => Some(LD), // TODO: Need to put 9 other instructions here
+            10 => Some(LD_A),
+            11 => Some(JP_B),
+            12 => Some(RND),
+            13 => Some(DRW),
+            14 => Some(SKP),
+            15 => Some(SKNP),
+            _ => return Option::None
+        };
+    }
+
     pub fn new() -> Chip8 { 
-        log::info!("Starting initialization");
-        log::info!("Creating window");
-        log::debug!("Width: {} Height: {}", WINDOW_WIDTH, WINDOW_HEIGHT);
-
-        let mut window = Window::new(
-            "Chip 8",
-            WINDOW_WIDTH,
-            WINDOW_HEIGHT,
-            WindowOptions::default())
-            .unwrap_or_else(|e| {
-                panic!("Could not create emulator window: {}", e)
-            });
-
-        window.set_target_fps(60);
-
-        // let azure_blue = from_u8_rgb(0, 127, 255);
-        // let red = from_u8_rgb(255, 127, 0);
-        // let mut buffer: Vec<bool> = vec![false; BUFFER_WIDTH * BUFFER_HEIGHT];
-        log::info!("Creating buffer");
-        log::debug!("Width: {} Height: {}", BUFFER_WIDTH, BUFFER_HEIGHT);
-        let mut buffer: Vec<u32> = vec![0; BUFFER_WIDTH * BUFFER_HEIGHT];
-        // buffer[66] = from_u8_to_bin_color(255);
-        // buffer[64] = from_u8_to_bin_color(255);
-        // buffer[63] = from_u8_to_bin_color(255);
-        // buffer[10] = from_u8_to_bin_color(255);
-        // buffer[74] = from_u8_to_bin_color(255);
-
-        // for i in 256..544 {
-        //     buffer[i] = from_u8_to_bin_color(i as u8);
-        // }
-        // let mut aaa = 0;
-        // for i in 256..544 {
-        //     if aaa == 4 {
-        //     aaa = 0;
-        //     buffer[i] = from_u8_to_bin_color(i as u8);
-        //     }
-        //     aaa += 1;
-        // }
-
-        log::info!("Finishing initialization");
+        Chip8::log_chip8_action("create Chip 8".to_string());
+        DebugPrinter::log_info("finish initialization".to_string());
 
         Chip8 {
             cpu: CPU::new(),
+            display: Display::new(),
             memory: Memory::new(),
-            display: window,
-            display_buffer: buffer,
             keys: vec![
                 KEY_0,
                 KEY_1,
@@ -138,7 +165,7 @@ impl Chip8 {
     }
 
     fn log_opcode(&self, code: String) {
-        log::debug!("opcode: {}", code);
+        DebugPrinter::log_state(format!("opcode: {}", code));
     }
 
     fn clear_screen(&self) {
@@ -146,8 +173,11 @@ impl Chip8 {
     }
 
     fn jump_to_address(&mut self, address: u16) {
-        self.log_opcode("CALL".to_string());
+        // WARN: Btw, this increments PC
+        self.log_opcode("JP (1)".to_string());
+        Chip8::log_chip8_action(format!("jump to 0x{:04X}", address)); 
         self.cpu.set_program_counter_to_address(address);
+        self.cpu.increment_pc();
     }
 
     fn jump_offset_by_v0(&mut self) {
@@ -252,28 +282,14 @@ impl Chip8 {
         register_data = result_val;
     }
 
-    fn display_sprite(&mut self, x: u8, y: u8, n_bytes: u8) {
-        self.log_opcode("DRW".to_string());
-        let starting_addr = self.cpu.regI.data as u8;
-        let mut buffer = self.display_buffer.clone();
-        
-        // WARN: Deveria colocar a flag do VF aqui
-        for addr in starting_addr..starting_addr + n_bytes {
-            let mem_val = self.memory.fetch_in_address(addr as u16);
-            self.draw_line_from_u8(x, y, mem_val as u8);
-            // if next_vals <= 0 {
-            //     self.cpu.VF.data = 1;
-            // }
-            // else {
-            //     self.cpu.VF.data = 1;
-            // }
-        }
-
-        self.display_buffer = buffer;
+    fn store_from_register_x_into_y(&mut self, reg_x_id: u8, reg_y_id: u8) {
+        let data = self.cpu.get_register_data(reg_x_id as usize);
+        self.cpu.set_register_data(reg_y_id as usize, data);
     }
 
-    fn store_from_register_x_into_y(&self) {
-        
+    fn store_from_register_y_into_x(&mut self, reg_x_id: u8, reg_y_id: u8) {
+        let data = self.cpu.get_register_data(reg_y_id as usize);
+        self.cpu.set_register_data(reg_x_id as usize, data);
     }
 
     fn set_delay_timer_value_at_vx(&mut self, reg_id: u8) {
@@ -303,7 +319,7 @@ impl Chip8 {
         let addr = self.cpu.regI.data;
         for i in 0..up_to {
             let reg_data =self.cpu.get_register_data(i as usize);
-            self.memory.set_in_address((addr + i as u16), reg_data as u16);
+            self.memory.set_in_address((addr + i as u16), reg_data);
         }
     }
 
@@ -317,7 +333,7 @@ impl Chip8 {
     fn call_subroutine_at_address(&mut self, address: u16) {
         self.cpu.increment_sp();
         let sp_val = self.cpu.get_sp() as u16;
-        self.memory.stack[sp_val as usize] = self.cpu.get_pc() as u16; // WARN: Not same byte
+        self.memory.stack[sp_val as usize] = self.cpu.get_pc(); // WARN: Not same byte
                                                                        // size
         self.cpu.set_program_counter_to_address(address);
     }
@@ -334,7 +350,7 @@ impl Chip8 {
     fn set_keypress_at_vx(&mut self, reg_id: u8) {
         // WARN: I must freeze execution until a
         // key is pressed
-        let key_pressed_vec = self.display.get_keys_pressed(minifb::KeyRepeat::No);
+        let key_pressed_vec = self.display.get_keys_pressed();
         let key_pressed = key_pressed_vec
             .first()
             .unwrap_or_else(|| {
@@ -363,58 +379,83 @@ impl Chip8 {
 
     fn read_instruction(&mut self, mut instruction: &u16) {
 
-        log::debug!("Masking opcode");
+        Chip8::log_chip8_action("mask opcode".to_string());
         let opcode = self.get_nibble(instruction, 4);
-
         let nibble_3 = self.get_nibble(instruction, 3);
         let nibble_2 = self.get_nibble(instruction, 2);
         let nibble_1 = self.get_nibble(instruction, 1);
-        log::debug!(
-            "instruction={:04X}, nibbles={:X}{:X}{:X}{:X}",
+        DebugPrinter::log_state(format!(
+            "instruction: 0x{:04X}, nibbles: n1={:X}, n2={:X}, n3={:X}, n4={:X}",
             instruction,
             opcode,
             nibble_3,
             nibble_2,
             nibble_1
-        );
+        ));
 
-        match opcode {
-            0 => self.clear_screen(),
-            1 => self.jump_to_address(self.cpu.regI.data), // WARN: Assuming I is for addresses...
-            2 => self.call_address(),
-            3 => {
+        let op = self
+            .nibble_to_instruction_type(opcode as u8)
+            .unwrap_or_else(|| {
+                panic!("Could not unwrap opcode")
+            });
+
+        if op.type_id() != DRW.type_id() || op.type_id() != JP.type_id() {
+            return
+        }
+
+        match op {
+            // CLS => self.clear_screen(),
+            RET => {
+                let address = (&nibble_3 << 8) | (nibble_2 << 4) | nibble_1;
+                self.jump_to_address(address) // WARN: Assuming I is for addresses...
+            }
+            JP => self.call_address(),
+            CALL => {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
                 self.value_equals_register_value(value, nibble_3 as u8);
             }
-            4 => {
+            SE_BYTE => {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
                 self.value_not_equals_register_value(value as u8, nibble_3 as u8);
             }
-            5 => {
+            SNE => {
                 self.compare_registers_values(nibble_2 as u8, nibble_3 as u8);
             }
-            6 => {
+            SE => {
                 let value = join_2_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8);
                 self.set_value_at_register(nibble_3 as u8, value);
             }
-            7 => {
+            LD_BYTE => {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
                 self.add_byte_operation(nibble_3 as u8, value);
             }
-            9 => {
+            LD_8 => {
+                Chip8::log_chip8_action("oops, suposed to store in register".to_string());
+                self.store_from_register_y_into_x(nibble_3 as u8, nibble_2 as u8);
+                // let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
+                // self.value_equals_register_value(value, nibble_3 as u8);
+            }
+            LD => {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
                 self.value_equals_register_value(value, nibble_3 as u8);
             }
-            10 => {
+            LD_A => {
                 let value = join_3_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8, nibble_3 as u8);
                 self.set_register_i(value as u16);
             }
-            11 => {
+            JP_B => {
                 self.jump_offset_by_v0()
             }
-            // 12 => self.and_number_to_random_value(),
-            13 => self.display_sprite(nibble_3 as u8, nibble_2 as u8, nibble_1 as u8),
-            14 => {
+            // RND => self.and_number_to_random_value(),
+             // 13 => self.draw_sprite(nibble_3 as u8, nibble_2 as u8, nibble_1 as u8),
+            DRW => {
+                // DebugPrinter::log_info("I REACHED HERE FOR RUSTY CRABE SAKE".to_string());
+                // self.draw_pixel(1, 13);
+                // self.draw_pixel(13, 1);
+                self.display.draw_sprite(&self.memory, &mut self.cpu.regI, nibble_2 as u8, nibble_3 as u8, nibble_1 as u8);
+                // sleep(Duration::new(1, 0));
+            },
+            SKP => {
                 if nibble_2 == 9 && nibble_1 == 14 {
                     self.skip_instruction_if_vx_equal_keyboard_pressed(nibble_3 as u8);
                 }
@@ -422,7 +463,7 @@ impl Chip8 {
                     self.skip_instruction_if_vx_not_equal_keyboard_pressed(nibble_3 as u8);
                 }
             }
-            15 => {
+            SKNP => {
                 if nibble_2 == 0 && nibble_1 == 7 {
                     self.set_delay_timer_value_at_vx(nibble_3 as u8);
                 }
@@ -449,84 +490,53 @@ impl Chip8 {
             }
             _ => return
         }
-        self.cpu.increment_pc();
+    }
+
+    pub fn draw_pixel(&mut self, x: u8, y: u8) {
+        self.display.draw_pixel(x, y);
     }
 
     pub fn run(&mut self) {
-        log::debug!("Initiating run");
-
+        DebugPrinter::log_info("initiate run".to_string());
+        // self.display.draw_line_from_u8(1, 1, 0b10101010);
+        // self.display.draw_line_from_u8(1, 2, 0b01010101);
+        // self.display.draw_line_from_u8(1, 3, 0b10101010);
+        // self.display.draw_line_from_u8(1, 4, 0b01010101);
+           // self.display.draw_line_from_u8(1, 1, 0b00111100);
+           // self.display.draw_line_from_u8(1, 2, 0b01000010);
+           // self.display.draw_line_from_u8(1, 3, 0b10100101);
+           // self.display.draw_line_from_u8(1, 4, 0b10000001);
+           // self.display.draw_line_from_u8(1, 5, 0b10100101);
+           // self.display.draw_line_from_u8(1, 6, 0b10011001);
+           // self.display.draw_line_from_u8(1, 7, 0b01000010);
+           // self.display.draw_line_from_u8(1, 8, 0b00111100);
+            // self.display.draw_line_from_u8(1, 1, 0b11111111);
+            // self.display.draw_line_from_u8(1, 2, 0b00000000);
+            // self.display.draw_line_from_u8(1, 3, 0b11111111);
+            // self.display.draw_line_from_u8(1, 4, 0b00000000);
+            // self.display.draw_line_from_u8(1, 5, 0b11111111);
+            // self.display.draw_line_from_u8(1, 6, 0b00000000);
+            // self.display.draw_line_from_u8(1, 7, 0b11111111);
+            // self.display.draw_line_from_u8(1, 8, 0b00000000);
         while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
-            // self.interpret();
+            Chip8::log_chip8_action("start run".to_string());
+            let instr_1 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
+            let instr_2 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
+            let instruction = (instr_1 << 8) | instr_2;
+            Chip8::log_chip8_action(format!("join  0x{:04X} to 0x{:04X} into 0x{:0$X}", instr_1 as usize, instr_2, instruction));
+            self.read_instruction(&instruction);
             self.update();
-
-            let keys = self.display.get_keys_pressed(minifb::KeyRepeat::No);
-            for key in keys {
-                println!("{:?}", key);
-            }
+            //
+            // // let keys = self.display.get_keys_pressed();
+            // // for key in keys {
+            // //     println!("{:?}", key);
+            // // }
         }
     }
 
     fn update(&mut self) {
         // let buffer: Vec<u32> = self.display_buffer.into();
-        self.display
-            .update_with_buffer(&self.display_buffer, BUFFER_WIDTH, BUFFER_HEIGHT)
-            .unwrap_or_else(|e| {
-                panic!("Could not update display: {}", e)
-            });
-    }
-
-    // pub fn interpret(&mut self) {
-    //     let mut copy_vec: Vec<u16> = Vec::new();
-    //     copy_vec.resize(self.rom.len(), 0);
-    //     copy_vec.copy_from_slice(self.rom.as_slice());
-    //     for instruction in copy_vec {
-    //         self.read_instruction(&instruction);
-    //     }
-    // }
-
-    pub fn draw_square(&mut self) {
-        let start_x = 10;
-        let end_x = 40;
-        let start_y = 10;
-        let end_y = 20;
-        for x in start_x..end_x {
-            for y in start_y..end_y {
-                self.draw_pixel(x, y);
-            }
-        }
-    }
-
-    fn mirror_bits(&self, mut val: u8) -> u8 {
-        val = ((val & 0xaa) >> 1) | ((val & 0x55) << 1);
-        val = ((val & 0xcc) >> 2) | ((val & 0x33) << 2);
-        val
-    }
-
-    pub fn draw_line_from_u8(&mut self, x: u8, y: u8, sprite_val: u8) {
-        let true_val = self.mirror_bits(sprite_val);
-        for i in 0..8 {
-            if (true_val >> i) & 1 == 1 {
-                self.draw_pixel(x + i, y);
-            }
-        }
-    }
-
-    pub fn draw_h_line(&mut self) {
-        let start_x = 10;
-        let end_x = 40;
-        let y = 32;
-        for x in start_x..end_x {
-            self.draw_pixel(x, y);
-        }
-    }
-
-    pub fn draw_v_line(&mut self) {
-        let start_y = 6;
-        let end_y = 28;
-        let x = 54;
-        for y in start_y..end_y {
-            self.draw_pixel(x, y);
-        }
+        self.display.update();
     }
 
     pub fn get_nibble(&self, instruction: &u16, position: u8) -> u16 {
@@ -538,20 +548,4 @@ impl Chip8 {
         self.memory.log_contents();
     }
 
-    pub fn draw_pixel(&mut self, x: u8, y: u8) {
-        if x < 0 || x > BUFFER_WIDTH as u8 || y < 0 || y > BUFFER_HEIGHT as u8 {
-            panic!("Pixel out of buffer");
-        }
-        let x_loc: usize = (x - 1) as usize;
-        let y_loc: usize = (BUFFER_WIDTH * y as usize) - BUFFER_WIDTH;
-        let loc = x_loc + y_loc;
-        self.invert_pixel(loc);
-    }
-
-    fn invert_pixel(&mut self, loc: usize) {
-        if self.display_buffer[loc as usize] != 0 {
-            self.display_buffer[loc as usize] = 0;
-        }
-        self.display_buffer[loc as usize] = from_u8_to_bin_color(255);
-    }
 }
