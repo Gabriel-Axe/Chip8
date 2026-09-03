@@ -1,6 +1,6 @@
 use std::{any::Any, fs, io::Empty, num::ParseFloatError, path::PathBuf, thread::sleep, time::Duration};
 
-use crate::{chip8::InstructionType::{CALL, CLS, DRW, JP, JP_B, LD, LD_8, LD_A, LD_BYTE, RET, RND, SE, SE_BYTE, SKNP, SKP, SNE}, cpu::CPU, debug_printer::DebugPrinter, display::Display, memory::Memory, util::{from_u8_rgb, from_u8_to_bin_color, join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
+use crate::{chip8::InstructionType::{ADD7, CALL, CALL2, CLS, DRW, JP_B, JP1, LD, LD_8, LD_A, LD_BYTE, LD6, RET, RND, RND_C, SE, SE_BYTE, SE3, SE5, SKNP, SKP, SNE, SNE4, SNE9}, cpu::CPU, debug_printer::DebugPrinter, display::Display, memory::Memory, util::{join_2_nibbles_into_u8, join_2_u8_into_u16, join_3_nibbles_into_u8}};
 
 use minifb::{Key::{self, Key0}, Window, WindowOptions};
 use rand::{Rng, rng};
@@ -30,41 +30,47 @@ pub struct Chip8 {
 }
 
 pub enum InstructionType {
-    CLS,
+    CLS, 
     RET,
-    JP,
-    CALL,
-    SE_BYTE,
-    SNE,
-    SE,
-    LD_BYTE,
-    ADD_BYTE,
-    LD,
-    LD_8,
-    OR,
-    AND,
-    XOR,
-    ADD,
-    SUB,
-    SHR,
-    SUBN,
-    SHL,
-    SNE_9,
-    LD_A,
+    JP1,
     JP_B,
-    RND,
+    CALL2,
+    RND_C,
     DRW,
-    SKP,
-    SKNP,
-    LD_Fx07,
-    LD_Fx0A,
-    LD_Fx15,
-    LD_Fx18,
+
+    SE3,
+    SNE4,
+    SKP_E,
+    SKNP_E,
+    SE5,
+
+    SHR8,
+
+    OR8,
+    AND8,
+    XOR8,
+
+    SUB8,
+    SUBN8,
+
+    SHL8,
+    SNE9,
+
+    ADD7,
+    ADD8,
     ADD_F,
-    LD_Fx29,
-    LD_Fx33,
-    LD_Fx55,
-    LD_Fx65,
+
+    LD6,
+    LD8,
+    LD_A,
+    LD_F7,
+    LD_FA,
+    LD_F15,
+    LD_F18,
+    LD_F29,
+    LD_F33,
+    LD_F55,
+    LD_F65,
 }
 
 impl Chip8 {
@@ -73,11 +79,9 @@ impl Chip8 {
         DebugPrinter::log_action("chip8".to_string(), action);
     }
 
-    pub fn load_rom(&mut self, filename: &str) {
+    pub fn load_rom(&mut self, path: &str, filename: &str) {
         Chip8::log_chip8_action("Loading ROM".to_string());
-        // let mut path = PathBuf::from("roms/chip8-roms/programs");
-        // let mut path = PathBuf::from("test_rom");
-        let mut path = PathBuf::from("test_suite/bin");
+        let mut path = PathBuf::from(path);
         path.push(filename);
 
         let file  = fs::read(&path)
@@ -85,54 +89,79 @@ impl Chip8 {
                 panic!("Could not load ROM: {}, reason: {}", path.display(), err)
             });
 
-        let mut rom: Vec<u16> = Vec::new();
-        for i in (0..file.len()).step_by(2) {
-            if i + 1 < file.len() {
-                let instruction = ((file[i] as u16) << 8) | (file[i + 1] as u16);
-                rom.push(instruction);
-            }
-        }
+        // let mut rom: Vec<u16> = Vec::new();
+        // for i in (0..file.len()).step_by(2) {
+        //     if i % 2 < file.len() {
+        //     // if i + 1 < file.len() {
+        //         let instruction = ((file[i] as u16) << 8) | (file[i + 1] as u16);
+        //         rom.push(instruction);
+        //     }
+        // }
+        let instructions = self.get_intructions_from_file(file);
         
-        // WARN: Possibly shows absolute path
-        for (i, instruction) in rom.iter().enumerate().step_by(2) {
+        for (i, instruction) in instructions.iter().enumerate().step_by(2) {
+            // WARN: How the heck does the chip8 instructions work?
             let addr = i as u16;
-            // let instr_1 = (instruction & 0b1111) as u8;
-            // let instr_2 = (instruction >> 8) as u8;
             let high = (instruction >> 8) as u8;
             let low = (instruction & 0xFF) as u8;
             self.memory.set_in_address(addr, high);
             self.memory.set_in_address(addr + 1, low);
         }
+
         DebugPrinter::log_info(format!("loaded ROM: {}", filename));
     }
 
-    // pub fn log_instructions(&self) {
-    //     for instruction in self.rom.iter() {
-    //         log::debug!("(ROM) instruction={:04X}", instruction);
-    //     }
-    // }
+    fn get_intructions_from_file(&self, rom: Vec<u8>) -> Vec<u16> {
+
+        let mut temp: u8 = 0;
+        let mut instructions: Vec<u16> = Vec::new();
+
+        for (i, instruction) in rom.iter().enumerate() {
+            if i % 2 == 1 {
+                let stored = join_2_u8_into_u16(temp, *instruction);
+                instructions.push(stored);
+                temp = 0;
+            }
+
+            temp = *instruction;
+        }
+
+        instructions
+    }
 
     fn nibble_to_instruction_type(&self, instruction: u8) -> Option<InstructionType> {
 
         return match instruction {
             0 => Some(CLS),
-            1 => Some(RET),
-            2 => Some(JP),
-            3 => Some(CALL),
-            4 => Some(SE_BYTE),
-            5 => Some(SNE),
-            6 => Some(SE),
-            7 => Some(LD_BYTE),
-            8 => Some(LD_8),
-            9 => Some(LD), // TODO: Need to put 9 other instructions here
+            1 => Some(JP1),
+            2 => Some(CALL2),
+            3 => Some(SE3),
+            4 => Some(SNE4),
+            5 => Some(SE5),
+            6 => Some(LD6),
+            7 => Some(ADD7),
+            8 => self.match_instruction_8(instruction),
+            9 => Some(SNE9),
             10 => Some(LD_A),
             11 => Some(JP_B),
-            12 => Some(RND),
+            12 => Some(RND_C),
             13 => Some(DRW),
-            14 => Some(SKP),
-            15 => Some(SKNP),
+            14 => self.match_instruction_E(instruction),
+            15 => self.match_instruction_F(instruction),
             _ => return Option::None
         };
+    }
+
+    fn match_instruction_8(&self, instruction: u8) -> Option<InstructionType> {
+        
+    }
+
+    fn match_instruction_E(&self, instruction: u8) -> Option<InstructionType> {
+        
+    }
+
+    fn match_instruction_F(&self, instruction: u8) -> Option<InstructionType> {
+        
     }
 
     pub fn new() -> Chip8 { 
@@ -164,217 +193,8 @@ impl Chip8 {
         }
     }
 
-    fn log_opcode(&self, code: String) {
-        DebugPrinter::log_state(format!("opcode: {}", code));
-    }
-
     fn clear_screen(&self) {
         self.log_opcode("CLS".to_string());
-    }
-
-    fn jump_to_address(&mut self, address: u16) {
-        // WARN: Btw, this increments PC
-        self.log_opcode("JP (1)".to_string());
-        Chip8::log_chip8_action(format!("jump to 0x{:04X}", address)); 
-        self.cpu.set_program_counter_to_address(address);
-        self.cpu.increment_pc();
-    }
-
-    fn jump_offset_by_v0(&mut self) {
-        self.log_opcode("JP (B)".to_string());
-        let v0_data = self.cpu.get_register_data(0);
-        let mut cur_addr = self.get_pc_address();
-        self.jump_to_address(cur_addr + v0_data as u16);
-    }
-
-    fn skip_instruction_if_vx_equal_keyboard_pressed(&mut self, reg_id: u8) {
-        self.log_opcode("SKP".to_string());
-        let vx_data = self.cpu.get_register_data(reg_id as usize);
-        if self.keys.contains(&vx_data) {
-            self.cpu.increment_pc();
-        }
-    }
-
-    fn skip_instruction_if_vx_not_equal_keyboard_pressed(&mut self, reg_id: u8) {
-        self.log_opcode("SKNP".to_string());
-        let vx_data = self.cpu.get_register_data(reg_id as usize);
-        if !self.keys.contains(&vx_data) {
-            self.cpu.increment_pc();
-        }
-    }
-
-    fn skip_instruction_if_equal(&mut self, reg_id: u8, value: u8) {
-        let register_data = self.cpu.get_register_data(reg_id as usize as usize);
-        if register_data == value {
-            self.cpu.increment_pc();
-        }
-    }
-
-    fn skip_instruction_if_nequal(&mut self, reg_id: u8, value: u8) {
-        let register_data = self.cpu.get_register_data(reg_id as usize);
-        if register_data != value {
-            self.cpu.increment_pc();
-        }
-    }
-
-    fn set_value_of_pc(&mut self, value: u16) {
-        self.cpu.set_program_counter_to_value(value);
-    }
-
-    fn reset_pc(&mut self) {
-        self.cpu.reset_pc();
-    }
-
-    fn get_pc_address(&self) -> u16 {
-        self.get_pc_address()
-    }
-
-    fn value_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
-        self.log_opcode("SE".to_string());
-        // let register = ;
-        //
-        // if register.data == compared_val {
-        //     self.increment_pc();
-        // }
-    }
-
-    pub fn compare_registers_values(&mut self, reg_id_1: u8, reg_id_2: u8) {
-        self.log_opcode("SE".to_string());
-        let register_1_data = self.cpu.get_register_data(reg_id_1 as usize);
-        let register_2_data = self.cpu.get_register_data(reg_id_2 as usize);
-
-        if register_1_data != register_2_data {
-            self.cpu.increment_pc();
-        }
-    }
-
-    fn value_not_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
-        self.log_opcode("SNE".to_string());
-        let register_data = self.cpu.get_register_data(reg_id as usize);
-        if register_data != compared_val {
-            self.cpu.increment_pc();
-        }
-    }
-
-    fn byte_skip_instruction(&self) {
-        
-    }
-
-    fn set_value_at_register(&mut self, reg_id: u8, value: u8) {
-        self.log_opcode("LD".to_string());
-        let mut register_data = self.cpu.get_register_data(reg_id as usize);
-        register_data = value;
-    }
-
-    fn add_byte_operation(&mut self, reg_id: u8, value: u8) {
-        self.log_opcode("ADD".to_string());
-        let mut register_data = self.cpu.get_register_data(reg_id as usize);
-        let data = register_data;
-        register_data = data + value;
-    }
-
-    fn and_number_to_random_value(&mut self, reg_id: u8, and_val: u8) {
-        let mut rng = rng();
-
-        let mut register_data = self.cpu.get_register_data(reg_id as usize);
-        let val = rng.next_u32() as u8;
-        let result_val = and_val & val;
-        register_data = result_val;
-    }
-
-    fn store_from_register_x_into_y(&mut self, reg_x_id: u8, reg_y_id: u8) {
-        let data = self.cpu.get_register_data(reg_x_id as usize);
-        self.cpu.set_register_data(reg_y_id as usize, data);
-    }
-
-    fn store_from_register_y_into_x(&mut self, reg_x_id: u8, reg_y_id: u8) {
-        let data = self.cpu.get_register_data(reg_y_id as usize);
-        self.cpu.set_register_data(reg_x_id as usize, data);
-    }
-
-    fn set_delay_timer_value_at_vx(&mut self, reg_id: u8) {
-        let val = self.cpu.dt_reg.data;
-        let register = self.cpu.set_register_data(reg_id as usize, self.cpu.dt_reg.data);
-    }
-
-    fn set_delay_timer_value(&mut self, value: u8) {
-        self.log_opcode("LD".to_string());
-        self.cpu.dt_reg.data = value;
-    }
-
-    fn set_sound_timer_value(&mut self, value: u8) {
-        self.cpu.st_reg.data = value;
-    }
-
-    fn call_address(&self) {
-    }
-
-    fn increment_vx_to_i(&mut self, reg_id: u8) {
-        let reg_data = self.cpu.get_register_data(reg_id as usize);
-        let i_data = self.cpu.regI.data;
-        self.set_register_i(i_data + reg_data as u16);
-    }
-
-    fn store_registers_in_memory_up_to_vx(&mut self, up_to: u8) {
-        let addr = self.cpu.regI.data;
-        for i in 0..up_to {
-            let reg_data =self.cpu.get_register_data(i as usize);
-            self.memory.set_in_address((addr + i as u16), reg_data);
-        }
-    }
-
-    fn store_bcd_of_vx(&mut self, reg_id: u8) {
-        let val = self.cpu.get_register_data(reg_id as usize);
-        let hundreds = (val / 100) % 10;
-        let tens = (val / 10) % 10;
-        let units = val % 10;
-    }
-
-    fn call_subroutine_at_address(&mut self, address: u16) {
-        self.cpu.increment_sp();
-        let sp_val = self.cpu.get_sp() as u16;
-        self.memory.stack[sp_val as usize] = self.cpu.get_pc(); // WARN: Not same byte
-                                                                       // size
-        self.cpu.set_program_counter_to_address(address);
-    }
-
-    fn jump_to_machine_code(&self) {
-        
-    }
-
-    fn set_register_i(&mut self, value: u16) {
-        self.log_opcode("LD (A)".to_string());
-        self.cpu.regI.data = value;
-    }
-
-    fn set_keypress_at_vx(&mut self, reg_id: u8) {
-        // WARN: I must freeze execution until a
-        // key is pressed
-        let key_pressed_vec = self.display.get_keys_pressed();
-        let key_pressed = key_pressed_vec
-            .first()
-            .unwrap_or_else(|| {
-                panic!("Could not get the first key pressed")
-            });
-        // WARN: What do i do when 2 keys are pressed?
-        let key = self.keyboard_to_chip8_keyboard(*key_pressed);
-        self.set_value_at_register(reg_id, key);
-    }
-
-    fn keyboard_to_chip8_keyboard(&mut self, key: Key) -> u8 {
-        match key {
-            Key::NumPad0 => KEY_0,
-            Key::NumPad1 => KEY_1,
-            Key::NumPad2 => KEY_2,
-            Key::NumPad3 => KEY_3,
-            Key::NumPad4 => KEY_4,
-            Key::NumPad5 => KEY_5,
-            Key::NumPad6 => KEY_6,
-            Key::NumPad7 => KEY_7,
-            Key::NumPad8 => KEY_8,
-            Key::NumPad9 => KEY_9,
-            _ => { return 0; }
-        }
     }
 
     fn read_instruction(&mut self, mut instruction: &u16) {
@@ -423,7 +243,7 @@ impl Chip8 {
             }
             SE => {
                 let value = join_2_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8);
-                self.set_value_at_register(nibble_3 as u8, value);
+                self.load_in_register(nibble_3 as u8, value);
             }
             LD_BYTE => {
                 let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
@@ -435,10 +255,7 @@ impl Chip8 {
                 // let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
                 // self.value_equals_register_value(value, nibble_3 as u8);
             }
-            LD => {
-                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
-                self.value_equals_register_value(value, nibble_3 as u8);
-            }
+            LD => self.match_load_instruction(nibble_1, nibble_2, nibble_3),
             LD_A => {
                 let value = join_3_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8, nibble_3 as u8);
                 self.set_register_i(value as u16);
@@ -492,10 +309,6 @@ impl Chip8 {
         }
     }
 
-    pub fn draw_pixel(&mut self, x: u8, y: u8) {
-        self.display.draw_pixel(x, y);
-    }
-
     pub fn run(&mut self) {
         DebugPrinter::log_info("initiate run".to_string());
         // self.display.draw_line_from_u8(1, 1, 0b10101010);
@@ -535,7 +348,6 @@ impl Chip8 {
     }
 
     fn update(&mut self) {
-        // let buffer: Vec<u32> = self.display_buffer.into();
         self.display.update();
     }
 
@@ -547,5 +359,13 @@ impl Chip8 {
     pub fn log_memory_contents(&self) {
         self.memory.log_contents();
     }
+}
 
+#[cfg(test)
+mod tests {
+    use super::*;
+
+    #[test]
+    fn () {
+    }
 }

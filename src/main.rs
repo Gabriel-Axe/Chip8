@@ -4,6 +4,7 @@ mod chip8;
 mod cpu;
 mod display;
 mod memory;
+mod chip8_tests;
 mod debug_printer;
 mod register;
 mod util;

@@ -39,11 +39,16 @@ pub fn join_2_nibbles_into_u8(nibble_1: u8, nibble_2: u8) -> u8 {
     nibble_1 + nibble_2
 }
 
+pub fn join_2_u8_into_u16(major: u8, minor: u8) -> u16 {
+    let instruction: u16 = (major << 8) as u16;
+    let instruction: u16 = (instruction | minor as u16);
+    instruction
+}
+
 pub fn join_3_nibbles_into_u8(nibble_1: u8, nibble_2: u8, nibble_3: u8) -> u8 {
     nibble_1 + nibble_2 + nibble_3
 }
 
-// pub fn create_u32_vec_from_bool(bool_vec: Vec<bool>) -> Vec<u32> {
 pub fn create_u32_vec_from_bool(bool_vec: Vec<bool>) -> Vec<u32> {
     let mut integer_vec: Vec<u32> = vec![0; bool_vec.len()];
     for val in 0..bool_vec.len() {
