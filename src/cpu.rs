@@ -1,16 +1,28 @@
 use crate::{debug_printer::DebugPrinter, memory::Memory, register::{Register, RegisterI}};
 
+/// Chip 8 CPU
 pub struct CPU {
+
+    /// Array with 16 Registers, used in
+    /// instructions that use Vx and Vy
     registers: [Register; 16],
 
-    pc: u16, // Program Counter
-    stack_pointer: u8,
+    /// Program Counter
+    pc: u16, 
 
-    pub VF: Register, // NOTE: What is this register for?
+    /// Stack Pointer
+    sp: u8,
 
+    /// Flag Register (?)
+    pub VF: Register,
+
+    /// Forgot the Name Register
     pub regI: RegisterI,
 
+    /// Forgot the Name Register II
     pub dt_reg: Register,
+
+    /// Sound Register
     pub st_reg: Register,
 }
 
@@ -18,7 +30,6 @@ impl CPU {
     pub fn new() -> Self {
         DebugPrinter::log_info("create CPU".to_string());
         CPU {
-            // WARN: Implement `Copy` for register
             registers: [Register::new(); 16],
             VF: Register::new(),
 
@@ -28,7 +39,7 @@ impl CPU {
             st_reg: Register::new(),
 
             pc: 0x200,
-            stack_pointer: 0,
+            sp: 0,
         }
     }
 
@@ -37,7 +48,6 @@ impl CPU {
     }
 
     fn jump_to_address(&mut self, address: u16) {
-        // WARN: Btw, this increments PC
         self.log_opcode("JP (1)".to_string());
         Chip8::log_chip8_action(format!("jump to 0x{:04X}", address)); 
         self.cpu.set_program_counter_to_address(address);
@@ -95,11 +105,11 @@ impl CPU {
 
     fn value_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
         self.log_opcode("SE".to_string());
-        // let register = ;
-        //
-        // if register.data == compared_val {
-        //     self.increment_pc();
-        // }
+        let data = get_register_data(&mut self, reg_id);
+
+        if data == compared_val {
+            self.increment_pc();
+        }
     }
 
     pub fn compare_registers_values(&mut self, reg_id_1: u8, reg_id_2: u8) {
@@ -197,8 +207,7 @@ impl CPU {
     fn call_subroutine_at_address(&mut self, address: u16) {
         self.cpu.increment_sp();
         let sp_val = self.cpu.get_sp() as u16;
-        self.memory.stack[sp_val as usize] = self.cpu.get_pc(); // WARN: Not same byte
-                                                                       // size
+        self.memory.stack[sp_val as usize] = self.cpu.get_pc();
         self.cpu.set_program_counter_to_address(address);
     }
 
@@ -212,15 +221,12 @@ impl CPU {
     }
 
     fn set_keypress_at_vx(&mut self, reg_id: u8) {
-        // WARN: I must freeze execution until a
-        // key is pressed
         let key_pressed_vec = self.display.get_keys_pressed();
         let key_pressed = key_pressed_vec
             .first()
             .unwrap_or_else(|| {
                 panic!("Could not get the first key pressed")
             });
-        // WARN: What do i do when 2 keys are pressed?
         let key = self.keyboard_to_chip8_keyboard(*key_pressed);
         self.load_in_register(reg_id, key);
     }
@@ -273,9 +279,6 @@ impl CPU {
         self.increment_pc();
         DebugPrinter::log_state(format!("instruction: 0x{:04X}", instruction));
         instruction
-        // NOTE: Maybe i could refactor this into the CPU having
-        // a internal instruction management and storing the
-        // instruction instead of passing back to the Chip8
     }
 
     pub fn set_register_data(&mut self, reg_id: usize, val: u8) {
@@ -315,7 +318,6 @@ impl CPU {
     }
 
     pub fn increment_pc(&mut self) {
-        // WARN: This should not be public
         CPU::log_cpu_action("increment PC".to_string());
         self.pc += 1;
     }
@@ -346,101 +348,101 @@ impl CPU {
         self.registers[x as usize].data = val;
     }
 
-    // pub fn sub_values(&mut self, x: u8, y: u8) {
-    //     let mut vx = self.get_register_data(x);
-    //     let vy = self.get_register_data(y);
-    //     let mut vf = self.VF;
+    pub fn sub_values(&mut self, x: u8, y: u8) {
+        let mut vx = self.get_register_data(x);
+        let vy = self.get_register_data(y);
+        let mut vf = self.VF;
+
+        if vx.data > vy.data {
+            vf.data = 1;
+        }
+
+        let val = vy.data - vx.data;
+        vx.data = val;
+    }
+
+    pub fn store_delay_timer_in_vx(&mut self, reg_id: u8) {
+        let mut register = self.get_register_data(reg_id);
+        register.data = self.dt_reg.data;
+    }
+
+    pub fn store_vx_in_delay_timer(&mut self, reg_id: u8) {
+        let mut register = self.get_register_data(reg_id);
+        self.dt_reg.data = register.data;
+    }
+
+    pub fn add_vx_to_register_i(&mut self, reg_id: u8) {
+        let mut register = self.get_register_data(reg_id);
+        let i_val = self.regI.data;
+        self.regI.data = i_val + register.data as u16;
+    }
+
+    pub fn ld_store_in_memory(&mut self, memory: Memory) {
+        let cur_addr = self.regI.data;
+        for id_r in 0..15 {
+            let reg = self.get_register_data(id_r);
+            memory.data[cur_addr] = reg.data;
+            cur_addr += 1;
+        }
+    }
+
+    pub fn ld_read_in_memory(&mut self, memory: Memory) {
+        let cur_addr = self.regI.data;
+        for id_r in 0..15 {
+            let reg = self.get_register_data(id_r);
+            reg.data = memory.data[cur_addr];
+        }
+    }
+
+    pub fn store_vx_in_sound_timer(&mut self, reg_id: u8) {
+        let mut register = self.get_register_data(reg_id);
+        self.st_reg.data = register.data;
+    }
+
+    pub fn subn_values(&mut self, x: u8, y: u8) {
+        let mut vx = self.get_register_data(x);
+        let vy = self.get_register_data(y);
+        let mut vf = self.VF;
     //
-    //     if vx.data > vy.data {
-    //         vf.data = 1;
-    //     }
+        if vx.data > vy.data {
+            vf.data = 1;
+        }
     //
-    //     let val = vy.data - vx.data;
-    //     vx.data = val;
-    // }
+        let val = vx.data - vy.data;
+        vx.data = val;
+    }
 
-    // pub fn store_delay_timer_in_vx(&mut self, reg_id: u8) {
-    //     let mut register = self.get_register_data(reg_id);
-    //     register.data = self.dt_reg.data;
-    // }
-
-    // pub fn store_vx_in_delay_timer(&mut self, reg_id: u8) {
-    //     let mut register = self.get_register_data(reg_id);
-    //     self.dt_reg.data = register.data;
-    // }
-
-    // pub fn add_vx_to_register_i(&mut self, reg_id: u8) {
-    //     let mut register = self.get_register_data(reg_id);
-    //     let i_val = self.regI.data;
-    //     self.regI.data = i_val + register.data as u16;
-    // }
-
-    // pub fn ld_store_in_memory(&mut self, memory: Memory) {
-    //     let cur_addr = self.regI.data;
-    //     for id_r in 0..15 {
-    //         let reg = self.get_register_data(id_r);
-    //         memory.data[cur_addr] = reg.data;
-    //         cur_addr += 1;
-    //     }
-    // }
-
-    // pub fn ld_read_in_memory(&mut self, memory: Memory) {
-    //     let cur_addr = self.regI.data;
-    //     for id_r in 0..15 {
-    //         let reg = self.get_register_data(id_r);
-    //         reg.data = memory.data[cur_addr];
-    //     }
-    // }
-
-    // pub fn store_vx_in_sound_timer(&mut self, reg_id: u8) {
-    //     let mut register = self.get_register_data(reg_id);
-    //     self.st_reg.data = register.data;
-    // }
-
-    // pub fn subn_values(&mut self, x: u8, y: u8) {
-    //     let mut vx = self.get_register_data(x);
-    //     let vy = self.get_register_data(y);
-    //     let mut vf = self.VF;
+    pub fn shr_values(&mut self, x: u8) {
+        let mut vx = self.get_register_data(x);
+        let mut vf = self.VF;
     //
-    //     if vx.data > vy.data {
-    //         vf.data = 1;
-    //     }
+        if vx.data & 1 == 1 {
+            vf.data = 1;
+        } else {
+            vf.data = 0;
+        }
     //
-    //     let val = vx.data - vy.data;
-    //     vx.data = val;
-    // }
+        vx.data = vx.data / 2;
+    }
 
-    // pub fn shr_values(&mut self, x: u8) {
-    //     let mut vx = self.get_register_data(x);
-    //     let mut vf = self.VF;
-    //
-    //     if vx.data & 1 == 1 {
-    //         vf.data = 1;
-    //     } else {
-    //         vf.data = 0;
-    //     }
-    //
-    //     vx.data = vx.data / 2;
-    // }
+    pub fn return_from_subroutine(&mut self, memory: Memory) {
+        let addr = memory.stack[self.sp];
+        self.set_program_counter_to_address(addr);
+        self.decrement_sp();
+    }
 
-    // pub fn return_from_subroutine(&mut self, memory: Memory) {
-    //     let addr = memory.stack[self.sp];
-    //     self.set_program_counter_to_address(addr);
-    //     self.decrement_sp();
-    // }
+    pub fn shl_values(&mut self, x: u8) {
+        let mut vx = self.get_register_data(x);
+        let mut vf = self.VF;
 
-    // pub fn shl_values(&mut self, x: u8) {
-    //     let mut vx = self.get_register_data(x);
-    //     let mut vf = self.VF;
-    //
-    //     if vx.data & 1 == 1 {
-    //         vf.data = 1;
-    //     } else {
-    //         vf.data = 0;
-    //     }
-    //
-    //     vx.data = vx.data * 2;
-    // }
+        if vx.data & 1 == 1 {
+            vf.data = 1;
+        } else {
+            vf.data = 0;
+        }
+
+        vx.data = vx.data * 2;
+    }
 
     fn nand(&self, x: u8, y: u8) -> u8 {
         !(x & y)

@@ -1,22 +1,23 @@
 use std::fs;
 
 pub struct Disassembler {
-    instructions: Vec<u8>,
+    // instructions: Vec<u8>,
 }
 impl Disassembler {
 
-    pub fn read_instructions(&mut self, rom: Vec<u8>) {
+    pub fn read_instructions(rom: Vec<u8>) {
+        let mut instructions: Vec<u8> = Vec::new();
         for instr in rom {
-            self.instructions.push(instr);
+            instructions.push(instr);
         }
     }
 
-    pub fn output_to_file() -> std::io::Result<()> {
-        fs::write("hello", "hi")?;
-        let bytes: &[u8] = &[0x00, 0x01, 0x02, 0x03];
-        fs::write("data.bin", bytes)?;
+    pub fn output_to_file(binary_contents: Vec<u8>) -> std::io::Result<()> {
+        let contents = match str::from_utf8(&binary_contents) {
+            Ok(v) => v,
+            Err(e) => panic!("Something went wrong: {}", e),
+        };
+        fs::write("rom.dasm", contents)?;
         Ok(())
-        // for instr in self.instructions {
-        // }
     }
 }

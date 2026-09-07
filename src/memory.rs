@@ -18,7 +18,6 @@ impl Memory {
     }
 
     pub fn log_contents(&self) {
-        // DebugPrinter::log_state(format!("memory size: {}", self.size()));
         let boundary: usize = self.size();
         for address in 0..boundary {
             let data = self.fetch_in_address(address as u16, false);
@@ -49,15 +48,7 @@ impl Memory {
         address
     }
 
-    pub fn fetch_in_address(&self, addr: u16, offset: bool) -> u8 {
-        // let addr = self.offset_memory_address_access(addr);
-        // if offset == true {
-        //     log::debug!("Offset is set to: {:}", offset);
-        //     let addr = self.offset_memory_address_access(addr);
-        // }
-        //
-        // // WARN: I removed the jump offset here, because of... JMP
-        // let address = addr as usize;
+    pub fn fetch_in_address(&self, addr: u16) -> u8 {
         let contents = self.access_address(addr as u16)[addr as usize];
         Memory::log_memory_action(format!("fetch in address 0x{:04X}: 0x{:04X}", addr, contents));
         contents
@@ -66,15 +57,9 @@ impl Memory {
     pub fn set_in_address(&mut self, addr: u16, value: u8) {
         let address = self.offset_memory_address_access(addr);
         Memory::log_memory_action(format!("store 0x{:04X} in address 0x{:04X}", value, address));
-        // WARN: Maybe I shouldnt rely on a method to not panic
-        // and then set the value, maybe I should swet the value
-        // directly
         self.access_address(address as u16);
         self.data[(address) as usize] = value;
-        // WARN: In the function bellow, i use ADDR_RESERVED_END, however,
-        // fetch_in_address already uses the offset to fetch the data
-        // TODO: Find a way to fix this
-        let stored = self.fetch_in_address(addr, false);
+        let stored = self.fetch_in_address(addr);
         DebugPrinter::log_state(format!("address: 0x{:04X} stored: 0x{:04X} parameter: 0x{:04X}", address, stored, value));
     }
 }

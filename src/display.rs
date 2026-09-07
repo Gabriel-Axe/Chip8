@@ -4,6 +4,22 @@ use minifb::{Key, Window, WindowOptions};
 
 use crate::{debug_printer::DebugPrinter, memory::Memory, register::RegisterI, util::{from_u8_rgb, from_u8_to_bin_color}};
 
+const KEY_0: u8 = 0;
+const KEY_1: u8 = 1;
+const KEY_2: u8 = 2;
+const KEY_3: u8 = 3;
+const KEY_4: u8 = 4;
+const KEY_5: u8 = 5;
+const KEY_6: u8 = 6;
+const KEY_7: u8 = 7;
+const KEY_8: u8 = 8;
+const KEY_9: u8 = 9;
+const KEY_A: u8 = 10;
+const KEY_B: u8 = 11;
+const KEY_C: u8 = 12;
+const KEY_D: u8 = 13;
+const KEY_E: u8 = 14;
+const KEY_F: u8 = 15;
 const WINDOW_WIDTH: usize = 1920 / 3;
 const WINDOW_HEIGHT: usize = 1080 / 3;
 const BUFFER_WIDTH: usize = 64;
@@ -68,6 +84,24 @@ impl Display {
             Self {
                 window: window,
                 buffer: buffer,
+            keys: vec![
+                KEY_0,
+                KEY_1,
+                KEY_2,
+                KEY_3,
+                KEY_4,
+                KEY_5,
+                KEY_6,
+                KEY_7,
+                KEY_8,
+                KEY_9,
+                KEY_A,
+                KEY_B,
+                KEY_C,
+                KEY_D,
+                KEY_E,
+                KEY_F,
+            ]
             }
     }
 
@@ -149,7 +183,6 @@ impl Display {
             panic!("Pixel out of buffer");
         }
         DebugPrinter::log_state(format!("x: {} y: {}", x, y));
-        // let x = x - 1;
         let x_loc: usize = x as usize;
         let y_loc: usize = (BUFFER_WIDTH * y as usize) - BUFFER_WIDTH;
         let loc = x_loc + y_loc;
@@ -161,7 +194,6 @@ impl Display {
 
     fn invert_pixel(&mut self, loc: usize) -> bool {
         Display::log_display_action("invert pixel".to_string());
-        // self.buffer[loc as usize] = ((!self.buffer[loc as usize] | 255) && (self.buffer[loc as usize] | !255)) as u32
         let old = self.buffer[loc as usize];
         let mut colided = false;
         if self.buffer[loc as usize] > 0 {
@@ -195,29 +227,18 @@ impl Display {
         let y = y + 1;
         let x = x + 19;
 
-        // let starting_addr = self.cpu.regI.data as u8;
         let starting_addr = regI.data as u8;
         let end_addr = starting_addr + n_bytes;
         let mut buffer = self.buffer.clone();
         DebugPrinter::log_state(format!("starting_bytes: {:04X}, end_bytes: {:04X}", starting_addr, end_addr));
-        // WARN: Deveria colocar a flag do VF aqui
         Display::log_display_action("start draw".to_string());
         for (i, addr) in (starting_addr..end_addr).enumerate() {
             let addr = memory.offset_memory_address_access(addr as u16);
             let mem_val = memory.fetch_in_address(addr as u16, false);
-            // self.draw_pixel(x, (y + i as u8));
-            // self.draw_pixel((x + i as u8), y);
             let colided = self.draw_line_from_u8(x, (y + i as u8), mem_val);
             if colided {
                 regI.data = 1;
             }
-            // self.draw_line_from_u8(x, (y + i as u8), mem_val as u8);
-            // if next_vals <= 0 {
-            //     self.cpu.VF.data = 1;
-            // }
-            // else {
-            //     self.cpu.VF.data = 1;
-            // }
         }
 
         self.buffer = buffer;
