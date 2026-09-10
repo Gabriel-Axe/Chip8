@@ -11,11 +11,13 @@ mod memory;
 mod debug_printer;
 mod register;
 mod util;
+mod file_handler;
 
 fn main() {
     env_logger::init();
-    let mut chip8 = Chip8::new();
-    chip8.load_rom("/home/gabriel/Programing/Projects/Rust/Chip8/test_suite/bin", "2-ibm-logo.ch8");
+    let mut chip8 = Chip8::new("1-chip8-logo.ch8", Some("./test_suite/bin/1-chip8-logo.ch8"));
+    chip8.set_folder("./test_suite/bin");
+    // chip8.load_rom("/home/gabriel/Programing/Projects/Rust/Chip8/test_suite/bin", );
     chip8.run();
     // Disassembler::output_to_file(rom);
 }

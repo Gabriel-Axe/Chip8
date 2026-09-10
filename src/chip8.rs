@@ -1,6 +1,6 @@
 use std::{any::Any, fmt::format, fs, io::Empty, num::ParseFloatError, path::PathBuf, thread::sleep, time::Duration};
 
-use crate::{cpu::CPU, debug_printer::{self, DebugPrinter}, display::Display, memory::{Memory, PROGRAM_START_OFFSET}, opcode_handler::Instruction::{self, ADD_VALUE_TO_REGISTER_7, CLEAR_SCREEN_0, DRAW_D, LOAD_INDEX_REGISTER_WITH_VALUE_A, LOAD_REGISTER_VX_WITH_VALUE_6, UNKNOWN}, util::{join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
+use crate::{cpu::CPU, debug_printer::{self, DebugPrinter}, display::Display, file_handler::RomHandler, memory::{Memory, PROGRAM_START_OFFSET}, opcode_handler::Instruction::{self, ADD_VALUE_TO_REGISTER_7, CLEAR_SCREEN_0, DRAW_D, LOAD_INDEX_REGISTER_WITH_VALUE_A, LOAD_REGISTER_VX_WITH_VALUE_6, UNKNOWN}, util::{join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
 use minifb::{Key::{self, Key0}, Window, WindowOptions};
 use rand::{Rng, rng};
@@ -58,25 +58,6 @@ impl Chip8 {
 
     fn log_chip8_action(action: String) {
         DebugPrinter::log_action("chip8".to_string(), action);
-    }
-
-    pub fn load_rom(&mut self, path: &str, filename: &str) {
-        Chip8::log_chip8_action("Loading ROM".to_string());
-        let mut path = PathBuf::from(path);
-        path.push(filename);
-
-        let file  = fs::read(&path)
-            .unwrap_or_else(|err| {
-                panic!("Could not load ROM: {}, reason: {}", path.display(), err)
-            });
-
-        // let instructions = self.get_intructions_from_file(file);
-        
-        for (mut addr, instruction) in file.iter().enumerate() {
-            self.memory.set_value_in_address(addr + PROGRAM_START_OFFSET as usize, *instruction);
-        }
-
-        DebugPrinter::log_info(format!("loaded ROM: {}", filename));
     }
 
     /// Reads the suplied file contents and stores it
@@ -141,19 +122,26 @@ impl Chip8 {
         Option::None
     }
 
-    pub fn new() -> Chip8 { 
+    pub fn new(rom: &str, path: Option<&str>) -> Chip8 { 
         Chip8::log_chip8_action("create Chip 8".to_string());
         DebugPrinter::log_info("finish initialization".to_string());
 
-        Chip8 {
+        let mut chip8 = Chip8 {
             cpu: CPU::new(),
             display: Display::new(),
             memory: Memory::new(),
-        }
+            rom_handler: RomHandler::new(rom, path)
+        };
+
+        chip8.rom_handler.load_rom(&mut chip8.memory);
+        chip8
     }
 
     fn clear_screen(&mut self) {
         self.display.clear_screen();
+    pub fn set_folder(&mut self, path: &str) {
+        self.rom_handler.set_folder(path);
+        self.rom_handler.load_rom(&mut self.memory);
     }
 
     fn read_instruction(&mut self, mut instruction: &u16) {
