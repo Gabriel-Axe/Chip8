@@ -6,16 +6,16 @@ mod disassembler;
 mod chip8;
 mod cpu;
 mod display;
+mod opcode_handler;
 mod memory;
 mod debug_printer;
 mod register;
 mod util;
 
 fn main() {
-    let rom = load_rom("/home/gabriel/Programing/Projects/Rust/Chip8/test_suite/bin", "2-ibm-logo.ch8");
     env_logger::init();
     let mut chip8 = Chip8::new();
-    chip8.load_rom("IBM Logo.ch8");
+    chip8.load_rom("/home/gabriel/Programing/Projects/Rust/Chip8/test_suite/bin", "2-ibm-logo.ch8");
     chip8.run();
     // Disassembler::output_to_file(rom);
 }

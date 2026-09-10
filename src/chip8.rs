@@ -1,6 +1,6 @@
-use std::{any::Any, fs, io::Empty, num::ParseFloatError, path::PathBuf, thread::sleep, time::Duration};
+use std::{any::Any, fmt::format, fs, io::Empty, num::ParseFloatError, path::PathBuf, thread::sleep, time::Duration};
 
-use crate::{cpu::CPU, debug_printer::DebugPrinter, display::Display, memory::Memory, opcode_handler::Instruction::{self, CLEAR_SCREEN_0}, util::{join_2_nibbles_into_u8, join_2_u8_into_u16, join_3_nibbles_into_u8}};
+use crate::{cpu::CPU, debug_printer::{self, DebugPrinter}, display::Display, memory::{Memory, PROGRAM_START_OFFSET}, opcode_handler::Instruction::{self, ADD_VALUE_TO_REGISTER_7, CLEAR_SCREEN_0, DRAW_D, LOAD_INDEX_REGISTER_WITH_VALUE_A, LOAD_REGISTER_VX_WITH_VALUE_6, UNKNOWN}, util::{join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
 use minifb::{Key::{self, Key0}, Window, WindowOptions};
 use rand::{Rng, rng};
@@ -70,14 +70,10 @@ impl Chip8 {
                 panic!("Could not load ROM: {}, reason: {}", path.display(), err)
             });
 
-        let instructions = self.get_intructions_from_file(file);
+        // let instructions = self.get_intructions_from_file(file);
         
-        for (i, instruction) in instructions.iter().enumerate().step_by(2) {
-            let addr = i as u16;
-            let high = (instruction >> 8) as u8;
-            let low = (instruction & 0xFF) as u8;
-            self.memory.set_in_address(addr, high);
-            self.memory.set_in_address(addr + 1, low);
+        for (mut addr, instruction) in file.iter().enumerate() {
+            self.memory.set_value_in_address(addr + PROGRAM_START_OFFSET as usize, *instruction);
         }
 
         DebugPrinter::log_info(format!("loaded ROM: {}", filename));
@@ -93,9 +89,10 @@ impl Chip8 {
 
         for (i, instruction) in rom.iter().enumerate() {
             if i % 2 == 1 {
-                let stored = join_2_u8_into_u16(temp, *instruction);
+                let temp: u16 = (temp << 4) as u16;
+                let stored: u16 = (temp | *instruction as u16);
                 instructions.push(stored);
-                temp = 0;
+                let temp: u8 = 0;
             }
 
             temp = *instruction;
@@ -104,14 +101,17 @@ impl Chip8 {
         instructions
     }
 
-    fn nibble_to_instruction_type(&self, instruction: u16) -> Option<Instruction> {
+    fn instruction_to_type(&self, instruction: u16) -> Option<Instruction> {
 
-        let x = (instruction >> 4 * 3) as u8;
-        let y = (instruction >> 4 * 2 & 0xF) as u8;
+        let opcode = (instruction >> 4 * 3) as u8;
+        let x = (instruction >> 4 * 2 & 0xF) as u8;
+        let y = (instruction >> 4 * 1 & 0xF) as u8;
         let kk = (instruction & 0xFF) as u8;
-        let nnn = (instruction & 0xFFF) as u8;
+        let nnn = (instruction & 0xFFF) as u16;
 
-        return match instruction {
+        DebugPrinter::log_state(format!("instruction op: {:0X} x: {:0X} y: {:0X} kk: {:02X} nnn: {:03X} full: {:04X}", opcode, x, y, kk, nnn, instruction));
+
+        return match opcode {
             0 => Some(CLEAR_SCREEN_0),
             6 => Some(Instruction::LOAD_REGISTER_VX_WITH_VALUE_6 { x: x, value: kk }),
             7 => Some(Instruction::ADD_VALUE_TO_REGISTER_7 { x: x, value: kk }),
@@ -158,38 +158,56 @@ impl Chip8 {
     fn read_instruction(&mut self, mut instruction: &u16) {
 
         Chip8::log_chip8_action("mask opcode".to_string());
-        let opcode = self.get_nibble(instruction, 4);
-        let nibble_3 = self.get_nibble(instruction, 3);
-        let nibble_2 = self.get_nibble(instruction, 2);
-        let nibble_1 = self.get_nibble(instruction, 1);
-        DebugPrinter::log_state(format!(
-            "instruction: 0x{:04X}, nibbles: n1={:X}, n2={:X}, n3={:X}, n4={:X}",
-            instruction,
-            opcode,
-            nibble_3,
-            nibble_2,
-            nibble_1
-        ));
+
+        // let opcode = self.get_nibble(instruction, 4);
+        //
+        // let nibble_3 = self.get_nibble(instruction, 3);
+        // let nibble_2 = self.get_nibble(instruction, 2);
+        // let nibble_1 = self.get_nibble(instruction, 1);
+
+        // DebugPrinter::log_state(format!(
+        //     "instruction: 0x{:04X}, nibbles: n1={:X}, n2={:X}, n3={:X}, n4={:X}",
+        //     instruction,
+        //     opcode,
+        //     nibble_3,
+        //     nibble_2,
+        //     nibble_1
+        // ));
 
         let op = self
-            .nibble_to_instruction_type(opcode)
-            .unwrap_or_else(|| {
-                panic!("Could not unwrap opcode")
-            });
+            .instruction_to_type(*instruction)
+            .unwrap_or_else(|| { UNKNOWN });
 
         match op {
-            _ => return
+            CLEAR_SCREEN_0 => self.clear_screen(),
+            LOAD_REGISTER_VX_WITH_VALUE_6 { x, value } => self.cpu.store_in_register_vx_val(x, value),
+            ADD_VALUE_TO_REGISTER_7 { x, value } => self.cpu.add_value_to_regixer_vx(value, x),
+            LOAD_INDEX_REGISTER_WITH_VALUE_A { value } => self.cpu.store_in_register_i_value(value),
+            DRAW_D { x, y, n } => {
+                Chip8::log_chip8_action("DRW operation".to_string());
+                let conflict = self.display.draw_line_from_u8(x, y, n);
+                if conflict {
+                    self.cpu.set_vf_value(true);
+                }
+            },
+            _ => {
+                DebugPrinter::log_state(format!("unknown instruction type: {:04X}", *instruction));
+                return
+            }
         }
     }
-
     pub fn run(&mut self) {
         DebugPrinter::log_info("initiate run".to_string());
+
         while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
             Chip8::log_chip8_action("start run".to_string());
+
             let instr_1 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
             let instr_2 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
+
             let instruction = (instr_1 << 8) | instr_2;
-            Chip8::log_chip8_action(format!("join  0x{:04X} to 0x{:04X} into 0x{:0$X}", instr_1 as usize, instr_2, instruction));
+            Chip8::log_chip8_action(format!("join  0x{:04X} to 0x{:04X} into 0x{:04X}", instr_1, instr_2, instruction));
+
             self.read_instruction(&instruction);
             self.display.update();
         }

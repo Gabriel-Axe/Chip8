@@ -16,16 +16,16 @@ pub struct CPU {
     sp: u8,
 
     /// Flag Register (?)
-    pub VF: Register,
+    VF: Register,
 
     /// Forgot the Name Register
-    pub regI: RegisterI,
+    regI: RegisterI,
 
     /// Forgot the Name Register II
-    pub dt_reg: Register,
+    dt_reg: Register,
 
     /// Sound Register
-    pub st_reg: Register,
+    st_reg: Register,
 }
 
 impl CPU {
@@ -47,6 +47,18 @@ impl CPU {
 
     fn log_opcode(&self, code: String) {
         DebugPrinter::log_state(format!("opcode: {}", code));
+    }
+
+    pub fn set_vf_value(&mut self, active: bool) {
+        if active {
+            self.VF.data = 1;
+            return;
+        }
+        self.VF.data = 0;
+    }
+
+    pub fn get_vf_value(&self) -> u8 {
+        self.VF.data
     }
 
     fn jump_to_address(&mut self, address: u16) {
@@ -132,7 +144,7 @@ impl CPU {
         
     }
 
-    fn load_in_register(&mut self, reg_id: u8, value: u8) {
+    pub fn store_in_register_vx_val(&mut self, reg_id: u8, value: u8) {
         self.log_opcode("LD".to_string());
         let mut register_data = self.get_register_data(reg_id);
         register_data = value;
@@ -158,6 +170,28 @@ impl CPU {
         let data = self.get_register_data(reg_x_id);
         self.set_register_data(reg_y_id, data);
     }
+
+    pub fn add_value_to_regixer_vx(&mut self, value: u8, reg_id: u8) {
+        let data = self.get_register_data(reg_id);
+        let mut new_data: u8 = 0;
+        let temp: u16 = (data + value) as u16;
+        if temp > 255 {
+            println!("value > 255: {}", temp);
+            // println!("value: {}", temp);
+            new_data = (temp - 255) as u8;
+        }
+        else {
+            let temp: u8 = (data + value) as u8;
+            println!("value < 255: {}", temp);
+            new_data = temp;
+        }
+        self.set_register_data(reg_id, new_data);
+    }
+
+    pub fn store_in_register_i_value(&mut self, value: u16) {
+        self.set_register_i(value);
+    }
+
 
     // fn store_from_register_y_into_x(&mut self, reg_x_id: u8, reg_y_id: u8) {
     //     let data = self.get_register_data(reg_y_id);
@@ -273,9 +307,9 @@ impl CPU {
 
     pub fn fetch_instruction_in_memory(&mut self, memory: &Memory) -> u8 {
         CPU::log_cpu_action("fetch instruction".to_string());
-        let instruction = memory.fetch_in_address(self.pc);
+        let instruction = *memory.get_data_in_address(self.pc as usize);
         self.increment_pc();
-        DebugPrinter::log_state(format!("instruction: 0x{:04X}", instruction));
+        DebugPrinter::log_state(format!("instruction: 0x{:02X}", instruction));
         instruction
     }
 
@@ -423,8 +457,8 @@ impl CPU {
     // }
 
     pub fn return_from_subroutine(&mut self, memory: Memory) {
-        let addr = memory.fetch_in_address(self.sp as u16);
-        self.set_program_counter_to_address(addr as u16);
+        let addr = memory.get_data_in_address(self.sp as usize);
+        self.set_program_counter_to_address(*addr as u16);
         // WARN: wth is wrong wwith these methods wthat expect u16 and i sending a u8?
         self.decrement_sp();
     }

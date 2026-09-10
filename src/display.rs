@@ -2,7 +2,7 @@ use std::{fmt::format, str::FromStr};
 
 use minifb::{Key, Window, WindowOptions};
 
-use crate::{debug_printer::DebugPrinter, memory::Memory, register::RegisterI, util::{from_u8_rgb, from_u8_to_bin_color}};
+use crate::{debug_printer::DebugPrinter, memory::{Memory, PROGRAM_START_OFFSET}, register::RegisterI, util::{from_u8_rgb, from_u8_to_bin_color}};
 
 const KEY_0: u8 = 0;
 const KEY_1: u8 = 1;
@@ -228,16 +228,18 @@ impl Display {
         let y = y + 1;
         let x = x + 19;
 
-        let starting_addr = regI.data as u8;
-        let end_addr = starting_addr + n_bytes;
+        let starting_addr = regI.data;
+        let end_addr = starting_addr + n_bytes as u16;
         let mut buffer = self.buffer.clone();
+
         DebugPrinter::log_state(format!("starting_bytes: {:04X}, end_bytes: {:04X}", starting_addr, end_addr));
         Display::log_display_action("start draw".to_string());
         for (i, addr) in (starting_addr..end_addr).enumerate() {
-            let addr = memory.offset_memory_address_access(addr as u16);
-            let mem_val = memory.fetch_in_address(addr as u16);
+            let addr = addr + PROGRAM_START_OFFSET;
+            let mem_val = *memory.get_data_in_address(addr as usize);
             let colided = self.draw_line_from_u8(x, (y + i as u8), mem_val);
             if colided {
+                // WARN: Isnt it for the VF register?
                 regI.data = 1;
             }
         }
