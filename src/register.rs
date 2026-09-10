@@ -6,7 +6,6 @@ pub struct RegisterI {
     pub data: u16
 }
 
-
 impl Register {
     pub fn new() -> Self {
         Self { data: 0 }
@@ -17,6 +16,12 @@ impl Register {
 impl Clone for Register {
     fn clone(&self) -> Register {
         Register { data: self.data }
+    }
+}
+
+impl Clone for RegisterI {
+    fn clone(&self) -> RegisterI {
+        RegisterI { data: self.data }
     }
 }
 

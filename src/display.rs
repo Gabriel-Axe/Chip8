@@ -2,7 +2,7 @@ use std::{fmt::format, str::FromStr};
 
 use minifb::{Key, Window, WindowOptions};
 
-use crate::{debug_printer::DebugPrinter, memory::{Memory, PROGRAM_START_OFFSET}, register::RegisterI, util::{from_u8_rgb, from_u8_to_bin_color}};
+use crate::{debug_printer::DebugPrinter, memory::{Memory, PROGRAM_START_OFFSET}, register::{Register, RegisterI}, util::{from_u8_rgb, from_u8_to_bin_color}};
 
 const KEY_0: u8 = 0;
 const KEY_1: u8 = 1;
@@ -24,6 +24,7 @@ const WINDOW_WIDTH: usize = 1920 / 3;
 const WINDOW_HEIGHT: usize = 1080 / 3;
 const BUFFER_WIDTH: usize = 64;
 const BUFFER_HEIGHT: usize = 32;
+const BUFFER_SIZE: usize = BUFFER_WIDTH * BUFFER_HEIGHT;
 
 pub struct Display {
     window: Window,
@@ -39,6 +40,11 @@ fn from_u8_to_brightness(color: u32) -> u32 {
 }
 
 impl Display {
+
+    pub fn clear_screen(&mut self) {
+        Display::log_display_action("clear screen".to_string());
+        self.buffer = vec![0; BUFFER_SIZE];
+    }
 
     fn log_display_action(action: String) {
         DebugPrinter::log_action("display".to_string(), action);
@@ -75,11 +81,13 @@ impl Display {
                 panic!("Could not create emulator window: {}", e)
             });
 
-        window.set_target_fps(30);
+        window.set_target_fps(10);
 
         Display::log_display_action("creating buffer".to_string());
         DebugPrinter::log_state(format!("buffer width: {} height: {}", BUFFER_WIDTH, BUFFER_HEIGHT));
-        let mut buffer: Vec<u32> = vec![0; BUFFER_WIDTH * BUFFER_HEIGHT];
+
+        let mut buffer: Vec<u32> = vec![0; BUFFER_SIZE];
+
         DebugPrinter::log_state("buffer = [0; width * height]".to_string());
 
             Self {
@@ -129,19 +137,34 @@ impl Display {
     }
 
     pub fn draw_line_from_u8(&mut self, x: u8, y: u8, sprite_val: u8) -> bool {
-        log::debug!("draw line, sprite: {:04X}, x: {:}, y: {:}", sprite_val, x, y);
+        DebugPrinter::log_state(format!("draw line, sprite: {:04X}, x: {:}, y: {:}", sprite_val, x, y));
+
         let mut colided = false;
         let true_val = sprite_val;
+
+        // NOTE:
+        // When you shift a number like 44 >> 2 (or 0b101100 >> 2)
+        // you get a number such as 0b1011, which after
+        // AND'ng to 1 (0b1) would brigh 1 (0b101{1})
         for i in 0..8 {
             let mut pot_colide = false;
-            if (true_val >> i) & 1 == 1 {
-                 pot_colide = self.draw_pixel(x + i, y);
+            let should_draw = (sprite_val >> i) & 1;
+            // println!("should_draw {} sprite_val {} i {}", should_draw, sprite_val, i);
+            if should_draw == 0 {
+                // println!("not drawing");
+                continue;
             }
+            // println!("drawing");
+            pot_colide = self.draw_pixel(x + i, y);
+            // if (true_val >> i) & 1 == 1 {
+            //      pot_colide = self.draw_pixel(x + i, y);
+            // }
             if pot_colide == true {
                 colided = pot_colide;
             }
         }
 
+        Display::log_display_action("finish line draw".to_string());
         return colided;
     }
 
@@ -179,11 +202,12 @@ impl Display {
         self.window.get_keys_pressed(minifb::KeyRepeat::Yes)
     }
 
-    pub fn draw_pixel(&mut self, x: u8, y: u8) -> bool {
+    fn draw_pixel(&mut self, x: u8, y: u8) -> bool {
+        DebugPrinter::log_state(format!("draw pixel x: {} y: {}", x, y));
         if x < 0 || x > BUFFER_WIDTH as u8 || y < 0 || y > BUFFER_HEIGHT as u8 {
             panic!("Pixel out of buffer");
         }
-        DebugPrinter::log_state(format!("x: {} y: {}", x, y));
+
         let x_loc: usize = x as usize;
         let y_loc: usize = (BUFFER_WIDTH * y as usize) - BUFFER_WIDTH;
         let loc = x_loc + y_loc;
@@ -206,14 +230,12 @@ impl Display {
         }
 
         let new = self.buffer[loc as usize];
-
-        DebugPrinter::log_state(format!("self.buffer[{}] {:0b} -> {:0b}",
-            loc,
-            old,
-            new));
         return colided;
     }
 
+    /// Draws the pixels on the screen from the memory contents from regI data up to
+    /// n_bytes, at position x and y.
+    /// Returns true if any pixel colided (black to white, white to black)
     pub fn draw_sprite(&mut self, memory: &Memory, regI: &mut RegisterI, x: u8, y: u8, n_bytes: u8) {
 
         let n_bytes = if n_bytes == 0 {
@@ -222,8 +244,7 @@ impl Display {
             n_bytes
         };
 
-        Display::log_display_action("draw sprite".to_string());
-        DebugPrinter::log_state(format!("x: {:}, y: {:}, n_bytes: {:}", x, y, n_bytes));
+        DebugPrinter::log_state(format!("regI data: 0x{:0X} x: {:}, y: {:}, n_bytes: {:}", regI.data, x, y, n_bytes));
 
         let y = y + 1;
         let x = x + 19;
@@ -235,15 +256,18 @@ impl Display {
         DebugPrinter::log_state(format!("starting_bytes: {:04X}, end_bytes: {:04X}", starting_addr, end_addr));
         Display::log_display_action("start draw".to_string());
         for (i, addr) in (starting_addr..end_addr).enumerate() {
-            let addr = addr + PROGRAM_START_OFFSET;
+            // let addr = addr + PROGRAM_START_OFFSET;
+            Display::log_display_action(format!("start draw line at x {} y {}", x, y));
             let mem_val = *memory.get_data_in_address(addr as usize);
+            // println!("mem_val: {}", mem_val);
             let colided = self.draw_line_from_u8(x, (y + i as u8), mem_val);
             if colided {
                 // WARN: Isnt it for the VF register?
-                regI.data = 1;
+                // regI.data = 1;
             }
         }
 
         self.buffer = buffer;
+        Display::log_display_action("finish sprite draw".to_string());
     }
 }

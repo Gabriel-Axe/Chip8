@@ -152,13 +152,11 @@ impl Chip8 {
         }
     }
 
-    fn clear_screen(&self) {
+    fn clear_screen(&mut self) {
+        self.display.clear_screen();
     }
 
     fn read_instruction(&mut self, mut instruction: &u16) {
-
-        Chip8::log_chip8_action("mask opcode".to_string());
-
         // let opcode = self.get_nibble(instruction, 4);
         //
         // let nibble_3 = self.get_nibble(instruction, 3);
@@ -181,14 +179,15 @@ impl Chip8 {
         match op {
             CLEAR_SCREEN_0 => self.clear_screen(),
             LOAD_REGISTER_VX_WITH_VALUE_6 { x, value } => self.cpu.store_in_register_vx_val(x, value),
-            ADD_VALUE_TO_REGISTER_7 { x, value } => self.cpu.add_value_to_regixer_vx(value, x),
+            ADD_VALUE_TO_REGISTER_7 { x, value } => self.cpu.add_value_to_register_vx(value, x),
             LOAD_INDEX_REGISTER_WITH_VALUE_A { value } => self.cpu.store_in_register_i_value(value),
             DRAW_D { x, y, n } => {
                 Chip8::log_chip8_action("DRW operation".to_string());
-                let conflict = self.display.draw_line_from_u8(x, y, n);
-                if conflict {
-                    self.cpu.set_vf_value(true);
-                }
+                let conflict = self.display.draw_sprite(&self.memory, &mut self.cpu.get_regI_copy(), x, y, n);
+                // WARN: Get here if conflict ocurred
+                // if conflict {
+                //     self.cpu.set_vf_value(true);
+                // }
             },
             _ => {
                 DebugPrinter::log_state(format!("unknown instruction type: {:04X}", *instruction));
@@ -200,7 +199,7 @@ impl Chip8 {
         DebugPrinter::log_info("initiate run".to_string());
 
         while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
-            Chip8::log_chip8_action("start run".to_string());
+
 
             let instr_1 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
             let instr_2 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
@@ -209,6 +208,7 @@ impl Chip8 {
             Chip8::log_chip8_action(format!("join  0x{:04X} to 0x{:04X} into 0x{:04X}", instr_1, instr_2, instruction));
 
             self.read_instruction(&instruction);
+            self.cpu.log_state();
             self.display.update();
         }
     }

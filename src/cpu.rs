@@ -46,7 +46,7 @@ impl CPU {
     }
 
     fn log_opcode(&self, code: String) {
-        DebugPrinter::log_state(format!("opcode: {}", code));
+        DebugPrinter::log_state(format!("operation: {}", code));
     }
 
     pub fn set_vf_value(&mut self, active: bool) {
@@ -75,6 +75,14 @@ impl CPU {
         self.jump_to_address(cur_addr + v0_data as u16);
     }
 
+    pub fn log_state(&self) {
+        let datas = self.registers.map(|r| r.data);
+        DebugPrinter::log_state(format!("cpu state: registers = {}, reg I = {}, pc = {}", 
+                datas.map(|d| d.to_string())
+                    .join(", "),
+                self.regI.data, 
+                self.pc));
+    }
     // fn skip_instruction_if_vx_equal_keyboard_pressed(&mut self, reg_id: u8) {
     //     self.log_opcode("SKP".to_string());
     //     let vx_data = self.get_register_data(reg_id);
@@ -171,18 +179,19 @@ impl CPU {
         self.set_register_data(reg_y_id, data);
     }
 
-    pub fn add_value_to_regixer_vx(&mut self, value: u8, reg_id: u8) {
+    pub fn add_value_to_register_vx(&mut self, value: u8, reg_id: u8) {
+        self.log_opcode("7xkk".to_string());
         let data = self.get_register_data(reg_id);
         let mut new_data: u8 = 0;
         let temp: u16 = (data + value) as u16;
         if temp > 255 {
-            println!("value > 255: {}", temp);
+            // println!("value > 255: {}", temp);
             // println!("value: {}", temp);
             new_data = (temp - 255) as u8;
         }
         else {
             let temp: u8 = (data + value) as u8;
-            println!("value < 255: {}", temp);
+            // println!("value < 255: {}", temp);
             new_data = temp;
         }
         self.set_register_data(reg_id, new_data);
@@ -318,7 +327,7 @@ impl CPU {
         if reg_id > self.registers.len() || 0 > reg_id {
             panic!("Invalid register ID: {}", reg_id);
         }
-
+        CPU::log_cpu_action(format!("store {:0X} in register {}", val, reg_id));
         self.registers[reg_id].data = val;
     }
 
@@ -455,6 +464,10 @@ impl CPU {
     // //
     //     vx.data = vx.data / 2;
     // }
+
+    pub fn get_regI_copy(&self) -> RegisterI {
+        self.regI.clone()
+    }
 
     pub fn return_from_subroutine(&mut self, memory: Memory) {
         let addr = memory.get_data_in_address(self.sp as usize);
