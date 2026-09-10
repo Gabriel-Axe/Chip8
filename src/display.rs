@@ -22,8 +22,10 @@ const KEY_E: u8 = 14;
 const KEY_F: u8 = 15;
 const WINDOW_WIDTH: usize = 1920 / 3;
 const WINDOW_HEIGHT: usize = 1080 / 3;
-const BUFFER_WIDTH: usize = 64;
-const BUFFER_HEIGHT: usize = 32;
+const BUFFER_WIDTH: usize = 64 * 3;
+const BUFFER_HEIGHT: usize = 32 * 3;
+// const BUFFER_WIDTH: usize = 64;
+// const BUFFER_HEIGHT: usize = 32;
 const BUFFER_SIZE: usize = BUFFER_WIDTH * BUFFER_HEIGHT;
 
 pub struct Display {
@@ -41,10 +43,10 @@ fn from_u8_to_brightness(color: u32) -> u32 {
 
 impl Display {
 
-    pub fn clear_screen(&mut self) {
-        Display::log_display_action("clear screen".to_string());
-        self.buffer = vec![0; BUFFER_SIZE];
-    }
+    // pub fn clear_screen(&mut self) {
+    //     Display::log_display_action("clear screen".to_string());
+    //     self.buffer = vec![0; BUFFER_SIZE];
+    // }
 
     fn log_display_action(action: String) {
         DebugPrinter::log_action("display".to_string(), action);
@@ -81,7 +83,7 @@ impl Display {
                 panic!("Could not create emulator window: {}", e)
             });
 
-        window.set_target_fps(10);
+        window.set_target_fps(60);
 
         Display::log_display_action("creating buffer".to_string());
         DebugPrinter::log_state(format!("buffer width: {} height: {}", BUFFER_WIDTH, BUFFER_HEIGHT));
@@ -229,7 +231,7 @@ impl Display {
             self.buffer[loc as usize] = from_u8_to_brightness(255);
         }
 
-        let new = self.buffer[loc as usize];
+        // let new = self.buffer[loc as usize];
         return colided;
     }
 
@@ -252,6 +254,9 @@ impl Display {
         let starting_addr = regI.data;
         let end_addr = starting_addr + n_bytes as u16;
         let mut buffer = self.buffer.clone();
+        // let mut temp = self.buffer.clone();
+
+        // DebugPrinter::log_info(format!("buffer rn has a total of idk {} values", &val));
 
         DebugPrinter::log_state(format!("starting_bytes: {:04X}, end_bytes: {:04X}", starting_addr, end_addr));
         Display::log_display_action("start draw".to_string());
@@ -267,7 +272,8 @@ impl Display {
             }
         }
 
-        self.buffer = buffer;
+        // self.buffer = buffer;
+        // self.buffer = temp;
         Display::log_display_action("finish sprite draw".to_string());
     }
 }

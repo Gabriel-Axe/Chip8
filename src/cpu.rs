@@ -198,7 +198,7 @@ impl CPU {
     }
 
     pub fn store_in_register_i_value(&mut self, value: u16) {
-        self.set_register_i(value);
+        self.set_register_i_data_to_value(value);
     }
 
 
@@ -227,7 +227,7 @@ impl CPU {
     fn increment_vx_to_i(&mut self, reg_id: u8) {
         let reg_data = self.get_register_data(reg_id);
         let i_data = self.regI.data;
-        self.set_register_i(i_data + reg_data as u16);
+        self.set_register_i_data_to_value(i_data + reg_data as u16);
     }
 
     // fn store_registers_in_memory_up_to_vx(&mut self, up_to: u8) {
@@ -256,8 +256,8 @@ impl CPU {
         
     }
 
-    fn set_register_i(&mut self, value: u16) {
-        self.log_opcode("LD (A)".to_string());
+    fn set_register_i_data_to_value(&mut self, value: u16) {
+        self.log_opcode(format!("LD (A), nnn: {}", value));
         self.regI.data = value;
     }
 

@@ -10,6 +10,7 @@ pub struct Chip8 {
     cpu: CPU,
     display: Display,
     memory: Memory,
+    rom_handler: RomHandler,
 }
 
 /// The Chip 8 has many instructions names that are reused in between codes. 
@@ -137,8 +138,10 @@ impl Chip8 {
         chip8
     }
 
-    fn clear_screen(&mut self) {
-        self.display.clear_screen();
+    // fn clear_screen(&mut self) {
+    //     self.display.clear_screen();
+    // }
+
     pub fn set_folder(&mut self, path: &str) {
         self.rom_handler.set_folder(path);
         self.rom_handler.load_rom(&mut self.memory);
@@ -165,7 +168,7 @@ impl Chip8 {
             .unwrap_or_else(|| { UNKNOWN });
 
         match op {
-            CLEAR_SCREEN_0 => self.clear_screen(),
+            // CLEAR_SCREEN_0 => self.clear_screen(),
             LOAD_REGISTER_VX_WITH_VALUE_6 { x, value } => self.cpu.store_in_register_vx_val(x, value),
             ADD_VALUE_TO_REGISTER_7 { x, value } => self.cpu.add_value_to_register_vx(value, x),
             LOAD_INDEX_REGISTER_WITH_VALUE_A { value } => self.cpu.store_in_register_i_value(value),
@@ -184,10 +187,11 @@ impl Chip8 {
         }
     }
     pub fn run(&mut self) {
+
+        let mut run = 0;
         DebugPrinter::log_info("initiate run".to_string());
 
         while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
-
 
             let instr_1 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
             let instr_2 = self.cpu.fetch_instruction_in_memory(&self.memory) as u16;
@@ -197,6 +201,11 @@ impl Chip8 {
 
             self.read_instruction(&instruction);
             self.cpu.log_state();
+            println!("run: {}", run);
+            // if run == 5 {
+            //     while true {}
+            // }
+            run = run+1;
             self.display.update();
         }
     }
