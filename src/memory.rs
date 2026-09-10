@@ -20,7 +20,7 @@ impl Memory {
     pub fn log_contents(&self) {
         let boundary: usize = self.size();
         for address in 0..boundary {
-            let data = self.fetch_in_address(address as u16, false);
+            let data = self.fetch_in_address(address as u16);
             DebugPrinter::log_state(format!("address: 0x{:04X} | contents 0x{:04X}", address as u16, data));
         }
     }

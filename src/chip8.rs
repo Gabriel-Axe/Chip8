@@ -1,6 +1,6 @@
 use std::{any::Any, fs, io::Empty, num::ParseFloatError, path::PathBuf, thread::sleep, time::Duration};
 
-use crate::{chip8::InstructionType::{ADD7, CALL2, CLS, DRW, JP_B, JP1, LD_A, LD6, RET, RND_C, SE3, SE5, SNE4, SNE9}, cpu::CPU, debug_printer::DebugPrinter, display::Display, memory::Memory, util::{join_2_nibbles_into_u8, join_2_u8_into_u16, join_3_nibbles_into_u8}};
+use crate::{cpu::CPU, debug_printer::DebugPrinter, display::Display, memory::Memory, opcode_handler::Instruction::{self, CLEAR_SCREEN_0}, util::{join_2_nibbles_into_u8, join_2_u8_into_u16, join_3_nibbles_into_u8}};
 
 use minifb::{Key::{self, Key0}, Window, WindowOptions};
 use rand::{Rng, rng};
@@ -17,42 +17,42 @@ pub struct Chip8 {
 /// have a LD type instruction.
 /// Perhaps I could do a better job at filtering the LD type in the F instructions,
 /// but this suffices for now
-pub enum InstructionType {
-    CLS, 
-    RET,
-    JP1,
-    JP_B,
-    CALL2,
-    RND_C,
-    DRW,
-    SE3,
-    SNE4,
-    SKP_E,
-    SKNP_E,
-    SE5,
-    SHR8,
-    OR8,
-    AND8,
-    XOR8,
-    SUB8,
-    SUBN8,
-    SHL8,
-    SNE9,
-    ADD7,
-    ADD8,
-    ADD_F,
-    LD6,
-    LD8,
-    LD_A,
-    LD_F7,
-    LD_FA,
-    LD_F15,
-    LD_F18,
-    LD_F29,
-    LD_F33,
-    LD_F55,
-    LD_F65,
-}
+// pub enum InstructionType {
+//     CLS, 
+//     RET,
+//     JP1,
+//     JP_B,
+//     CALL2,
+//     RND_C,
+//     DRW,
+//     SE3,
+//     SNE4,
+//     SKP_E,
+//     SKNP_E,
+//     SE5,
+//     SHR8,
+//     OR8,
+//     AND8,
+//     XOR8,
+//     SUB8,
+//     SUBN8,
+//     SHL8,
+//     SNE9,
+//     ADD7,
+//     ADD8,
+//     ADD_F,
+//     LD6,
+//     LD8,
+//     LD_A,
+//     LD_F7,
+//     LD_FA,
+//     LD_F15,
+//     LD_F18,
+//     LD_F29,
+//     LD_F33,
+//     LD_F55,
+//     LD_F65,
+// }
 
 impl Chip8 {
 
@@ -62,7 +62,6 @@ impl Chip8 {
 
     pub fn load_rom(&mut self, path: &str, filename: &str) {
         Chip8::log_chip8_action("Loading ROM".to_string());
-        InstructionType
         let mut path = PathBuf::from(path);
         path.push(filename);
 
@@ -105,24 +104,34 @@ impl Chip8 {
         instructions
     }
 
-    fn nibble_to_instruction_type(&self, instruction: u8) -> Option<InstructionType> {
+    fn nibble_to_instruction_type(&self, instruction: u16) -> Option<Instruction> {
+
+        let x = (instruction >> 4 * 3) as u8;
+        let y = (instruction >> 4 * 2 & 0xF) as u8;
+        let kk = (instruction & 0xFF) as u8;
+        let nnn = (instruction & 0xFFF) as u8;
 
         return match instruction {
-            0 => Some(CLS),
-            1 => Some(JP1),
-            2 => Some(CALL2),
-            3 => Some(SE3),
-            4 => Some(SNE4),
-            5 => Some(SE5),
-            6 => Some(LD6),
-            7 => Some(ADD7),
-            8 => self.match_instruction_8(instruction),
-            9 => Some(SNE9),
-            10 => Some(LD_A),
-            11 => Some(JP_B),
-            12 => Some(RND_C),
-            13 => Some(DRW),
+            0 => Some(CLEAR_SCREEN_0),
+            6 => Some(Instruction::LOAD_REGISTER_VX_WITH_VALUE_6 { x: x, value: kk }),
+            7 => Some(Instruction::ADD_VALUE_TO_REGISTER_7 { x: x, value: kk }),
+            10 => Some(Instruction::LOAD_INDEX_REGISTER_WITH_VALUE_A { value: nnn }),
+            13 => Some(Instruction::DRAW_D { x: x, y: y, n: (instruction & 0xF) as u8 }),
             _ => return Option::None
+            // 0 => Some(CLS),
+            // 1 => Some(JP1),
+            // 2 => Some(CALL2),
+            // 3 => Some(SE3),
+            // 4 => Some(SNE4),
+            // 5 => Some(SE5),
+            // 6 => Some(LD6),
+            // 7 => Some(ADD7),
+            // 8 => self.match_instruction_8(instruction),
+            // 9 => Some(SNE9),
+            // 10 => Some(LD_A),
+            // 11 => Some(JP_B),
+            // 12 => Some(RND_C),
+            // 13 => Some(DRW),
         };
     }
 
@@ -144,7 +153,6 @@ impl Chip8 {
     }
 
     fn clear_screen(&self) {
-        self.log_opcode("CLS".to_string());
     }
 
     fn read_instruction(&mut self, mut instruction: &u16) {
@@ -164,84 +172,12 @@ impl Chip8 {
         ));
 
         let op = self
-            .nibble_to_instruction_type(opcode as u8)
+            .nibble_to_instruction_type(opcode)
             .unwrap_or_else(|| {
                 panic!("Could not unwrap opcode")
             });
 
         match op {
-            CLS => self.clear_screen(),
-            RET => {
-                let address = (&nibble_3 << 8) | (nibble_2 << 4) | nibble_1;
-            }
-            JP => self.call_address(),
-            CALL => {
-                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
-                self.value_equals_register_value(value, nibble_3 as u8);
-            }
-            SE_BYTE => {
-                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
-                self.value_not_equals_register_value(value as u8, nibble_3 as u8);
-            }
-            SNE => {
-                self.compare_registers_values(nibble_2 as u8, nibble_3 as u8);
-            }
-            SE => {
-                let value = join_2_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8);
-                self.load_in_register(nibble_3 as u8, value);
-            }
-            LD_BYTE => {
-                let value = join_2_nibbles_into_u8(nibble_2 as u8, nibble_1 as u8);
-                self.add_byte_operation(nibble_3 as u8, value);
-            }
-            LD_8 => {
-                Chip8::log_chip8_action("oops, suposed to store in register".to_string());
-                self.store_from_register_y_into_x(nibble_3 as u8, nibble_2 as u8);
-            }
-            LD_A => {
-                let value = join_3_nibbles_into_u8(nibble_1 as u8, nibble_2 as u8, nibble_3 as u8);
-                self.set_register_i(value as u16);
-            }
-            JP_B => {
-                self.jump_offset_by_v0()
-            }
-            RND => self.and_number_to_random_value(),
-            DRW => {
-                self.display.draw_sprite(&self.memory, &mut self.cpu.regI, nibble_2 as u8, nibble_3 as u8, nibble_1 as u8);
-            },
-            SKP => {
-                if nibble_2 == 9 && nibble_1 == 14 {
-                    self.skip_instruction_if_vx_equal_keyboard_pressed(nibble_3 as u8);
-                }
-                if nibble_2 == 10 && nibble_1 == 1 {
-                    self.skip_instruction_if_vx_not_equal_keyboard_pressed(nibble_3 as u8);
-                }
-            }
-            SKNP => {
-                if nibble_2 == 0 && nibble_1 == 7 {
-                    self.set_delay_timer_value_at_vx(nibble_3 as u8);
-                }
-
-                if nibble_2 == 0 && nibble_1 == 10 {
-                    self.set_keypress_at_vx(nibble_3 as u8);
-                }
-
-                if nibble_2 == 1 && nibble_1 == 5 {
-                    self.set_delay_timer_value(nibble_3 as u8);
-                }
-                if nibble_2 == 1 && nibble_1 == 8 {
-                    self.set_delay_timer_value(nibble_3 as u8);
-                }
-                if nibble_2 == 1 && nibble_1 == 14 {
-                    self.increment_vx_to_i(nibble_3 as u8);
-                }
-                if nibble_2 == 3 && nibble_1 == 3 {
-                    self.store_registers_in_memory_up_to_vx(nibble_3 as u8);
-                }
-                if nibble_2 == 5 && nibble_1 == 5 {
-                    self.store_registers_in_memory_up_to_vx(nibble_3 as u8);
-                }
-            }
             _ => return
         }
     }
@@ -255,7 +191,7 @@ impl Chip8 {
             let instruction = (instr_1 << 8) | instr_2;
             Chip8::log_chip8_action(format!("join  0x{:04X} to 0x{:04X} into 0x{:0$X}", instr_1 as usize, instr_2, instruction));
             self.read_instruction(&instruction);
-            self.update();
+            self.display.update();
         }
     }
 

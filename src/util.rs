@@ -40,7 +40,7 @@ pub fn join_2_nibbles_into_u8(nibble_1: u8, nibble_2: u8) -> u8 {
 }
 
 pub fn join_2_u8_into_u16(major: u8, minor: u8) -> u16 {
-    let instruction: u16 = (major << 8) as u16;
+    let instruction: u16 = (major << 4) as u16;
     let instruction: u16 = (instruction | minor as u16);
     instruction
 }

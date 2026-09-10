@@ -28,6 +28,7 @@ const BUFFER_HEIGHT: usize = 32;
 pub struct Display {
     window: Window,
     buffer: Vec<u32>,
+    keys: Vec<u8>,
 }
 
 fn from_u8_to_brightness(color: u32) -> u32 {
@@ -234,7 +235,7 @@ impl Display {
         Display::log_display_action("start draw".to_string());
         for (i, addr) in (starting_addr..end_addr).enumerate() {
             let addr = memory.offset_memory_address_access(addr as u16);
-            let mem_val = memory.fetch_in_address(addr as u16, false);
+            let mem_val = memory.fetch_in_address(addr as u16);
             let colided = self.draw_line_from_u8(x, (y + i as u8), mem_val);
             if colided {
                 regI.data = 1;
