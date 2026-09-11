@@ -1,6 +1,6 @@
 use std::{fs, path::PathBuf};
 
-use crate::{load_rom, memory::{self, Memory, PROGRAM_START_OFFSET}};
+use crate::{load_rom, memory::{self, Memory, PROGRAM_START_OFFSET}, util::mirror_bits};
 
 pub struct RomHandler
 {
@@ -53,6 +53,7 @@ impl RomHandler {
                 .get_rom() 
                 .iter() 
                 .enumerate() {
+            // let instruction = mirror_bits(*instruction);
             memory.set_value_in_address(addr + PROGRAM_START_OFFSET as usize, *instruction);
         }
 

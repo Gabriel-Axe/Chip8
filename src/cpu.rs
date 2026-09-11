@@ -118,7 +118,7 @@ impl CPU {
     }
 
     fn get_pc_address(&self) -> u16 {
-        self.get_pc_address()
+        self.pc
     }
 
     fn value_equals_register_value(&mut self, compared_val: u8, reg_id: u8) {
@@ -153,9 +153,10 @@ impl CPU {
     }
 
     pub fn store_in_register_vx_val(&mut self, reg_id: u8, value: u8) {
-        self.log_opcode("LD".to_string());
-        let mut register_data = self.get_register_data(reg_id);
-        register_data = value;
+        self.log_opcode("LD (6)".to_string());
+        self.registers[reg_id as usize].data = value;
+        // let mut register_data = self.get_register_data(reg_id);
+        // register_data = value;
     }
 
     fn add_byte_operation(&mut self, reg_id: u8, value: u8) {
@@ -304,7 +305,7 @@ impl CPU {
         DebugPrinter::log_action("cpu".to_string(), action);
     }
 
-    pub fn get_register_data(&mut self, reg_id: u8) -> u8 {
+    pub fn get_register_data(&self, reg_id: u8) -> u8 {
             let len = self.registers.len();
             let reg_id = reg_id as usize;
             if reg_id > len || 0 > reg_id {

@@ -4,6 +4,11 @@ pub fn print_bytes_in_16_binary(bytes: &Vec<u16>) {
     }
 }
 
+    pub fn mirror_bits(mut val: u8) -> u8 {
+        val = ((val & 0xaa) >> 1) | ((val & 0x55) << 1);
+        val = ((val & 0xcc) >> 2) | ((val & 0x33) << 2);
+        val
+    }
 
 pub fn print_bytes_in_binary(bytes: &Vec<u8>) {
     for &byte in bytes {

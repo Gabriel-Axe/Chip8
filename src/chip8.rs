@@ -1,6 +1,6 @@
 use std::{any::Any, fmt::format, fs, io::Empty, num::ParseFloatError, path::PathBuf, thread::sleep, time::Duration};
 
-use crate::{cpu::CPU, debug_printer::{self, DebugPrinter}, display::Display, file_handler::RomHandler, memory::{Memory, PROGRAM_START_OFFSET}, opcode_handler::Instruction::{self, ADD_VALUE_TO_REGISTER_7, CLEAR_SCREEN_0, DRAW_D, LOAD_INDEX_REGISTER_WITH_VALUE_A, LOAD_REGISTER_VX_WITH_VALUE_6, UNKNOWN}, util::{join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
+use crate::{cpu::CPU, debug_printer::{self, DebugPrinter}, display::Display, file_handler::RomHandler, memory::{Memory, PROGRAM_START_OFFSET}, opcode_handler::Instruction::{self, ADD_VALUE_TO_REGISTER_7, CLEAR_SCREEN_0, DRAW_D, JUMP_1, LOAD_INDEX_REGISTER_WITH_VALUE_A, LOAD_REGISTER_VX_WITH_VALUE_6, UNKNOWN}, util::{join_2_nibbles_into_u8, join_3_nibbles_into_u8}};
 
 use minifb::{Key::{self, Key0}, Window, WindowOptions};
 use rand::{Rng, rng};
@@ -95,6 +95,7 @@ impl Chip8 {
 
         return match opcode {
             0 => Some(CLEAR_SCREEN_0),
+            1 => Some(Instruction::JUMP_1 { nnn: nnn }),
             6 => Some(Instruction::LOAD_REGISTER_VX_WITH_VALUE_6 { x: x, value: kk }),
             7 => Some(Instruction::ADD_VALUE_TO_REGISTER_7 { x: x, value: kk }),
             10 => Some(Instruction::LOAD_INDEX_REGISTER_WITH_VALUE_A { value: nnn }),
@@ -169,12 +170,13 @@ impl Chip8 {
 
         match op {
             // CLEAR_SCREEN_0 => self.clear_screen(),
+            JUMP_1 { nnn } => self.cpu.set_program_counter_to_address(nnn),
             LOAD_REGISTER_VX_WITH_VALUE_6 { x, value } => self.cpu.store_in_register_vx_val(x, value),
             ADD_VALUE_TO_REGISTER_7 { x, value } => self.cpu.add_value_to_register_vx(value, x),
             LOAD_INDEX_REGISTER_WITH_VALUE_A { value } => self.cpu.store_in_register_i_value(value),
             DRAW_D { x, y, n } => {
                 Chip8::log_chip8_action("DRW operation".to_string());
-                let conflict = self.display.draw_sprite(&self.memory, &mut self.cpu.get_regI_copy(), x, y, n);
+                let conflict = self.display.draw_sprite(&self.memory, &self.cpu, &mut self.cpu.get_regI_copy(), x, y, n);
                 // WARN: Get here if conflict ocurred
                 // if conflict {
                 //     self.cpu.set_vf_value(true);
@@ -188,7 +190,7 @@ impl Chip8 {
     }
     pub fn run(&mut self) {
 
-        let mut run = 0;
+        let mut cycle = 0;
         DebugPrinter::log_info("initiate run".to_string());
 
         while self.display.is_open() && !self.display.is_key_down(Key::Escape) {
@@ -201,11 +203,11 @@ impl Chip8 {
 
             self.read_instruction(&instruction);
             self.cpu.log_state();
-            println!("run: {}", run);
+            DebugPrinter::log_state(format!("cycle: {}", cycle));
             // if run == 5 {
             //     while true {}
             // }
-            run = run+1;
+            cycle = cycle + 1;
             self.display.update();
         }
     }
